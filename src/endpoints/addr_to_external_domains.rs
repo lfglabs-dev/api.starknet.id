@@ -2,10 +2,10 @@ use crate::{models::AppState, utils::get_error};
 use axum::{
     extract::{Query, State},
     http::{HeaderMap, HeaderValue, StatusCode},
-    response::{IntoResponse, Json},
+    response::IntoResponse,
 };
 use futures::StreamExt;
-use mongodb::bson::{doc, Bson};
+use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc; // for stream handling
 
