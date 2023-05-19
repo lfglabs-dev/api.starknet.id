@@ -1,7 +1,7 @@
 use crate::{models::AppState, utils::get_error};
 use axum::{
     extract::{Query, State},
-    http::{StatusCode, HeaderMap, HeaderValue},
+    http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Json},
 };
 use mongodb::bson::doc;
@@ -11,11 +11,6 @@ use std::sync::Arc;
 #[derive(Serialize)]
 pub struct StarknetIdData {
     starknet_id: String,
-}
-
-#[derive(Serialize)]
-pub struct QueryError {
-    error: String,
 }
 
 #[derive(Deserialize)]
@@ -29,7 +24,9 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<StarknetIdQuery>,
 ) -> impl IntoResponse {
-    let ids_data = state.db.collection::<mongodb::bson::Document>("starknet_ids_data");
+    let ids_data = state
+        .db
+        .collection::<mongodb::bson::Document>("starknet_ids_data");
 
     let document = ids_data
         .find_one(
@@ -53,8 +50,7 @@ pub async fn handler(
                 let data = StarknetIdData { starknet_id };
                 (StatusCode::OK, headers, Json(data)).into_response()
             } else {
-                let error = QueryError { error: "no tokenid associated to this data was found".to_string() };
-                (StatusCode::OK, headers, Json(error)).into_response()
+                get_error("no tokenid associated to this data was found".to_string())
             }
         }
         Err(_) => get_error("Error while fetching from database".to_string()),

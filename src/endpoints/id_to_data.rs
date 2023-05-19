@@ -16,11 +16,6 @@ pub struct Data {
     is_owner_main: bool,
 }
 
-#[derive(Serialize)]
-pub struct QueryError {
-    error: String,
-}
-
 #[derive(Deserialize)]
 pub struct IdQuery {
     id: String,
@@ -78,10 +73,7 @@ pub async fn handler(
     };
 
     if domain_data.is_none() || owner.is_none() {
-        let error = QueryError {
-            error: "no domain associated to this starknet id was found".to_string(),
-        };
-        return (StatusCode::OK, headers, Json(error)).into_response();
+        return get_error("no domain associated to this starknet id was found".to_string());
     }
 
     let (domain, addr, expiry) = domain_data.unwrap();

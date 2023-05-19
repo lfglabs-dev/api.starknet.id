@@ -14,11 +14,6 @@ pub struct DomainToAddrData {
     domain_expiry: Option<i32>,
 }
 
-#[derive(Serialize)]
-pub struct QueryError {
-    error: String,
-}
-
 #[derive(Deserialize)]
 pub struct DomainQuery {
     domain: String,
@@ -53,10 +48,7 @@ pub async fn handler(
                     };
                     (StatusCode::OK, headers, Json(data)).into_response()
                 } else {
-                    let error = QueryError {
-                        error: "no address found".to_string(),
-                    };
-                    (StatusCode::OK, headers, Json(error)).into_response()
+                    get_error("no address found".to_string())
                 }
             }
             Err(_) => get_error("Error while fetching from database".to_string()),
@@ -84,10 +76,7 @@ pub async fn handler(
                     };
                     (StatusCode::OK, headers, Json(data)).into_response()
                 } else {
-                    let error = QueryError {
-                        error: "no address found".to_string(),
-                    };
-                    (StatusCode::OK, headers, Json(error)).into_response()
+                    get_error("no address found".to_string())
                 }
             }
             Err(_) => get_error("Error while fetching from database".to_string()),

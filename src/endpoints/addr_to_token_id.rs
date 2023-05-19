@@ -13,11 +13,6 @@ pub struct TokenIdData {
     token_id: String,
 }
 
-#[derive(Serialize)]
-pub struct QueryError {
-    error: String,
-}
-
 #[derive(Deserialize)]
 pub struct TokenIdQuery {
     addr: String,
