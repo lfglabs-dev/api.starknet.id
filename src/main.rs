@@ -48,6 +48,10 @@ async fn main() {
         )
         .route("/addr_to_domain", get(endpoints::addr_to_domain::handler))
         .route(
+            "/addr_to_external_domains",
+            get(endpoints::addr_to_external_domains::handler),
+        )
+        .route(
             "/addr_to_full_ids",
             get(endpoints::addr_to_full_ids::handler),
         )
