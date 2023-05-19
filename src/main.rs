@@ -43,6 +43,10 @@ async fn main() {
     let app = Router::new()
         .route("/", get(root))
         .route("/addr_to_domain", get(endpoints::addr_to_domain::handler))
+        .route(
+            "/addrs_to_domains",
+            post(endpoints::addrs_to_domains::handler),
+        )
         .with_state(shared_state)
         .layer(cors);
 
