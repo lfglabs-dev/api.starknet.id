@@ -1,8 +1,9 @@
 use crate::{models::AppState, utils::get_error};
 use axum::{
-    extract::{Json, State},
+    extract::{Query, State},
     http::StatusCode,
     response::IntoResponse,
+    Json,
 };
 use futures::stream::StreamExt;
 use mongodb::{bson::doc, options::AggregateOptions};
@@ -23,7 +24,7 @@ pub struct AddrQuery {
 
 pub async fn handler(
     State(state): State<Arc<AppState>>,
-    Json(query): Json<AddrQuery>,
+    Query(query): Query<AddrQuery>,
 ) -> impl IntoResponse {
     let starknet_ids = state
         .db

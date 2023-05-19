@@ -44,7 +44,7 @@ async fn main() {
         .route("/", get(root))
         .route(
             "/addr_to_full_ids",
-            post(endpoints::addr_to_full_ids::handler),
+            get(endpoints::addr_to_full_ids::handler),
         )
         .route("/addr_to_domain", get(endpoints::addr_to_domain::handler))
         .route(
