@@ -1,0 +1,10 @@
+[server]
+port = 8080
+
+[database]
+name = "starknetid"
+connection_string = "xxxxxx"
+
+[contracts]
+starknetid = "0xXXXXXXXXXXXX"
+naming = "0xXXXXXXXXXXXX"
