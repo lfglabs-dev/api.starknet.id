@@ -9,17 +9,23 @@ use futures::stream::StreamExt;
 use mongodb::{bson::doc, options::AggregateOptions};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-
 #[derive(Serialize, Deserialize)]
 pub struct FullId {
     id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     domain: Option<String>,
-    domain_expiry: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    domain_expiry: Option<i32>,
 }
 
 #[derive(Deserialize)]
 pub struct AddrQuery {
     addr: String,
+}
+
+#[derive(Serialize)]
+pub struct FullIdResponse {
+    full_ids: Vec<FullId>,
 }
 
 pub async fn handler(
@@ -82,8 +88,7 @@ pub async fn handler(
                 if let Ok(doc) = doc {
                     let id = doc.get_str("id").unwrap_or_default().to_owned();
                     let domain = doc.get_str("domain").ok().map(String::from);
-                    let domain_expiry = doc.get_str("domain_expiry").ok().map(String::from);
-
+                    let domain_expiry = doc.get_i32("domain_expiry").ok();
                     full_ids.push(FullId {
                         id,
                         domain,
@@ -91,8 +96,8 @@ pub async fn handler(
                     });
                 }
             }
-
-            (StatusCode::OK, Json(full_ids)).into_response()
+            let response = FullIdResponse { full_ids };
+            (StatusCode::OK, Json(response)).into_response()
         }
         Err(_) => get_error("Error while fetching from database".to_string()),
     }
