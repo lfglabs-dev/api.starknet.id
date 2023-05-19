@@ -56,6 +56,10 @@ async fn main() {
             get(endpoints::addr_to_full_ids::handler),
         )
         .route(
+            "/addr_to_token_id",
+            get(endpoints::addr_to_token_id::handler),
+        )
+        .route(
             "/addrs_to_domains",
             post(endpoints::addrs_to_domains::handler),
         )
