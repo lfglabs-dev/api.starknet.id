@@ -42,6 +42,10 @@ async fn main() {
     let cors = CorsLayer::new().allow_headers(Any).allow_origin(Any);
     let app = Router::new()
         .route("/", get(root))
+        .route(
+            "/addr_to_full_ids",
+            post(endpoints::addr_to_full_ids::handler),
+        )
         .route("/addr_to_domain", get(endpoints::addr_to_domain::handler))
         .route(
             "/addrs_to_domains",
