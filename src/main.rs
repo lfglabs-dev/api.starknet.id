@@ -63,6 +63,7 @@ async fn main() {
             "/addrs_to_domains",
             post(endpoints::addrs_to_domains::handler),
         )
+        .route("/data_to_ids", get(endpoints::data_to_ids::handler))
         .with_state(shared_state)
         .layer(cors);
 
