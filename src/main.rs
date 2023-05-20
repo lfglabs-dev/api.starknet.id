@@ -15,7 +15,7 @@ use tower_http::cors::{Any, CorsLayer};
 
 #[tokio::main]
 async fn main() {
-    println!("quest_server: starting v{}", env!("CARGO_PKG_VERSION"));
+    println!("starknetid_server: starting v{}", env!("CARGO_PKG_VERSION"));
     let conf = config::load();
     let client_options = ClientOptions::parse(&conf.database.connection_string)
         .await
