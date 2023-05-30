@@ -14,7 +14,7 @@ pub struct TokenURI {
     name: String,
     description: String,
     image: String,
-    expiry: Option<i64>,
+    expiry: Option<i32>,
     attributes: Option<Vec<Attribute>>,
 }
 
@@ -52,8 +52,7 @@ pub async fn handler(
         Ok(doc) => {
             if let Some(doc) = doc {
                 let domain = doc.get_str("domain").unwrap_or_default().to_owned();
-                let expiry = doc.get_i64("expiry").unwrap_or_default();
-
+                let expiry = doc.get_i32("expiry").unwrap_or_default();
                 let token_uri = TokenURI {
                     name: domain.clone(),
                     description: "This token represents an identity on StarkNet.".to_string(),
@@ -66,9 +65,9 @@ pub async fn handler(
                         },
                         Attribute {
                             trait_type: "Domain expiry".to_string(),
-                            value: vec![NaiveDateTime::from_timestamp(expiry, 0)
-                                .format("%b %d, %Y")
-                                .to_string()],
+                            value: vec![NaiveDateTime::from_timestamp_opt(expiry.into(), 0)
+                                .map(|dt| dt.format("%b %d, %Y").to_string())
+                                .unwrap_or_else(|| "Invalid date".into())],
                         },
                         Attribute {
                             trait_type: "Domain expiry timestamp".to_string(),
