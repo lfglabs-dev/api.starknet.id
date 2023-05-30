@@ -1,6 +1,6 @@
 use crate::{models::AppState, utils::get_error};
 use axum::{
-    extract::{Extension, Query, State},
+    extract::{Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,

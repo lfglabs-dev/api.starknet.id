@@ -1,0 +1,25 @@
+version: "3"
+
+services:
+  starknetid_server:
+    container_name: starknetid_server
+    build: .
+    command: ./target/release/starknetid_server
+    restart: always
+    ports:
+      - 8080:8080
+
+  nginx:
+    image: valian/docker-nginx-auto-ssl
+    restart: on-failure
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ssl_data:/etc/resty-auto-ssl
+    environment:
+      ALLOWED_DOMAINS: "api.starknet.id"
+      SITES: "api.starknet.id=starknetid_server:8080"
+
+volumes:
+  ssl_data:
