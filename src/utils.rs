@@ -10,5 +10,5 @@ pub struct ErrorMessage {
 }
 
 pub fn get_error(error: String) -> Response {
-    (StatusCode::INTERNAL_SERVER_ERROR, error).into_response()
+    (StatusCode::BAD_REQUEST, error).into_response()
 }
