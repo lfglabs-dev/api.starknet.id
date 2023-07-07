@@ -68,6 +68,22 @@ async fn main() {
         .route("/id_to_data", get(endpoints::id_to_data::handler))
         .route("/id_to_infts", get(endpoints::id_to_infts::handler))
         .route("/uri", get(endpoints::uri::handler))
+        .route(
+            "/referral/add_click",
+            post(endpoints::referral::add_click::handler),
+        )
+        .route(
+            "/referral/revenue",
+            get(endpoints::referral::revenue::handler),
+        )
+        .route(
+            "/referral/sales_count",
+            get(endpoints::referral::sales_count::handler),
+        )
+        .route(
+            "/referral/click_count",
+            get(endpoints::referral::click_count::handler),
+        )
         .with_state(shared_state)
         .layer(cors);
 
