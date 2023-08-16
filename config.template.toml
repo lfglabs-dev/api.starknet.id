@@ -8,3 +8,5 @@ connection_string = "xxxxxx"
 [contracts]
 starknetid = "0xXXXXXXXXXXXX"
 naming = "0xXXXXXXXXXXXX"
+verifier = "0xXXXXXXXXXXXX"
+pop_verifier = "0xXXXXXXXXXXXX"

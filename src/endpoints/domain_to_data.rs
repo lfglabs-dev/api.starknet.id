@@ -24,16 +24,18 @@ pub struct Data {
     discord: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     proof_of_personhood: Option<String>,
+    starknet_id: String, // Added the starknet_id field
 }
 
+// Struct for extracting the domain query parameter.
 #[derive(Deserialize)]
-pub struct IdQuery {
-    id: String,
+pub struct DomainQuery {
+    domain: String,
 }
 
 pub async fn handler(
     State(state): State<Arc<AppState>>,
-    Query(query): Query<IdQuery>,
+    Query(query): Query<DomainQuery>,
 ) -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
@@ -46,48 +48,37 @@ pub async fn handler(
     let domain_document = domains
         .find_one(
             doc! {
-                "token_id": &query.id,
+                "domain": &query.domain,
                 "_chain.valid_to": null,
             },
             None,
         )
         .await;
 
-    let domain_data = match domain_document {
-        Ok(doc) => {
-            if let Some(doc) = doc {
-                let domain = doc.get_str("domain").unwrap_or_default().to_owned();
-                let addr = doc.get_str("addr").ok().map(String::from);
-                let expiry = doc.get_i32("expiry").ok();
-                Some((domain, addr, expiry))
-            } else {
-                None
-            }
+    let (domain, addr, expiry, starknet_id) = match domain_document {
+        Ok(Some(doc)) => {
+            let domain = doc.get_str("domain").unwrap_or_default().to_owned();
+            let addr = doc.get_str("addr").ok().map(String::from);
+            let expiry = doc.get_i32("expiry").ok();
+            let id = doc.get_str("token_id").unwrap_or_default().to_owned();
+            (domain, addr, expiry, id)
         }
-        Err(_) => return get_error("Error while fetching from database".to_string()),
+        _ => return get_error("Error while fetching from database".to_string()),
     };
 
     let owner_document = starknet_ids
         .find_one(
             doc! {
-                "token_id": &query.id,
+                "token_id": &starknet_id, // using starknet_id
                 "_chain.valid_to": null,
             },
             None,
         )
         .await;
-
-    let owner = match owner_document {
-        Ok(doc) => doc.and_then(|doc| doc.get_str("owner").ok().map(String::from)),
-        Err(_) => return get_error("Error while fetching from database".to_string()),
+    let owner_addr = match owner_document {
+        Ok(Some(doc)) => doc.get_str("owner").ok().map(String::from).unwrap(),
+        _ => return get_error("Error while fetching starknet-id from database".to_string()),
     };
-
-    if domain_data.is_none() || owner.is_none() {
-        return get_error("no domain associated to this starknet id was found".to_string());
-    }
-
-    let (domain, addr, expiry) = domain_data.unwrap();
-    let owner = owner.unwrap();
 
     let pipeline = vec![
         doc! {
@@ -95,18 +86,16 @@ pub async fn handler(
                 "$or": [
                     {
                         "field": {
-                            // utf-8 encoded: github, twitter, discord
                             "$in": ["113702622229858", "32782392107492722", "28263441981469284"]
                         },
                         "verifier": &state.conf.contracts.verifier.to_string()
                     },
                     {
-                        // utf-8 encoded: proof_of_personhood
                         "field": "2507652182250236150756610039180649816461897572",
                         "verifier": &state.conf.contracts.pop_verifier.to_string()
                     }
                 ],
-                "token_id": &query.id,
+                "token_id": &starknet_id, // using starknet_id
                 "_chain.valid_to": null,
             }
         },
@@ -146,24 +135,26 @@ pub async fn handler(
         .find_one(
             doc! {
                 "domain": &domain,
-                "addr": &owner,
-                "rev_addr": &owner,
+                "addr": &owner_addr,
+                "rev_addr": &owner_addr,
                 "_chain.valid_to": null,
             },
             None,
         )
         .await;
     let is_owner_main = is_owner_main_document.is_ok() && is_owner_main_document.unwrap().is_some();
+
     let data = Data {
         domain,
         addr,
         domain_expiry: expiry,
         is_owner_main,
-        owner_addr: owner,
+        owner_addr,
         github,
         twitter,
         discord,
         proof_of_personhood,
+        starknet_id,
     };
 
     (StatusCode::OK, headers, Json(data)).into_response()
