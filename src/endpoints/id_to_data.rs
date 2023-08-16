@@ -4,7 +4,8 @@ use axum::{
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Json},
 };
-use mongodb::bson::doc;
+use futures::StreamExt;
+use mongodb::bson::{doc, Document};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -14,6 +15,15 @@ pub struct Data {
     addr: Option<String>,
     domain_expiry: Option<i32>,
     is_owner_main: bool,
+    owner_addr: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    github: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    twitter: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    discord: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    proof_of_personhood: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -91,12 +101,70 @@ pub async fn handler(
         )
         .await;
 
+    let pipeline = vec![
+        doc! {
+            "$match": {
+                "$or": [
+                    {
+                        "field": {
+                            // utf-8 encoded: github, twitter, discord
+                            "$in": ["113702622229858", "32782392107492722", "28263441981469284"]
+                        },
+                        "verifier": &state.conf.contracts.verifier.to_string()
+                    },
+                    {
+                        // utf-8 encoded: proof_of_personhood
+                        "field": "2507652182250236150756610039180649816461897572",
+                        "verifier": &state.conf.contracts.pop_verifier.to_string()
+                    }
+                ],
+                "token_id": &query.id,
+                "_chain.valid_to": null,
+            }
+        },
+        doc! {
+            "$group": {
+                "_id": "$field",
+                "data": { "$first": "$data" }
+            }
+        },
+    ];
+
+    let starknet_ids_data = state.db.collection::<Document>("starknet_ids_data");
+    let results = starknet_ids_data.aggregate(pipeline, None).await;
+
+    let mut github = None;
+    let mut twitter = None;
+    let mut discord = None;
+    let mut proof_of_personhood = None;
+
+    if let Ok(mut cursor) = results {
+        while let Some(result) = cursor.next().await {
+            if let Ok(doc) = result {
+                match doc.get_str("_id") {
+                    Ok("113702622229858") => github = doc.get_str("data").ok().map(String::from),
+                    Ok("32782392107492722") => twitter = doc.get_str("data").ok().map(String::from),
+                    Ok("28263441981469284") => discord = doc.get_str("data").ok().map(String::from),
+                    Ok("2507652182250236150756610039180649816461897572") => {
+                        proof_of_personhood = doc.get_str("data").ok().map(String::from)
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
     let is_owner_main = owner_document.is_ok() && owner_document.unwrap().is_some();
     let data = Data {
         domain,
         addr,
         domain_expiry: expiry,
         is_owner_main,
+        owner_addr: owner,
+        github,
+        twitter,
+        discord,
+        proof_of_personhood,
     };
 
     (StatusCode::OK, headers, Json(data)).into_response()

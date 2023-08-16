@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use starknet::core::types::FieldElement;
 use std::env;
 use std::fs;
 
@@ -19,8 +20,10 @@ pub_struct!(Database {
 });
 
 pub_struct!(Contracts {
-    starknetid: String,
-    naming: String,
+    starknetid: FieldElement,
+    naming: FieldElement,
+    verifier: FieldElement,
+    pop_verifier: FieldElement,
 });
 
 pub_struct!(Config {
