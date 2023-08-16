@@ -1,4 +1,7 @@
-use crate::{models::AppState, utils::get_error};
+use crate::{
+    models::{AppState, Data},
+    utils::get_error,
+};
 use axum::{
     extract::{Query, State},
     http::{HeaderMap, HeaderValue, StatusCode},
@@ -6,28 +9,9 @@ use axum::{
 };
 use futures::StreamExt;
 use mongodb::bson::{doc, Document};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::sync::Arc;
 
-#[derive(Serialize)]
-pub struct Data {
-    domain: String,
-    addr: Option<String>,
-    domain_expiry: Option<i32>,
-    is_owner_main: bool,
-    owner_addr: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    github: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    twitter: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    discord: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    proof_of_personhood: Option<String>,
-    starknet_id: String, // Added the starknet_id field
-}
-
-// Struct for extracting the domain query parameter.
 #[derive(Deserialize)]
 pub struct DomainQuery {
     domain: String,
@@ -69,7 +53,7 @@ pub async fn handler(
     let owner_document = starknet_ids
         .find_one(
             doc! {
-                "token_id": &starknet_id, // using starknet_id
+                "token_id": &starknet_id,
                 "_chain.valid_to": null,
             },
             None,
@@ -88,20 +72,20 @@ pub async fn handler(
                         "field": {
                             "$in": ["113702622229858", "32782392107492722", "28263441981469284"]
                         },
-                        "verifier": &state.conf.contracts.verifier.to_string()
+                        "verifier": { "$in": [ &state.conf.contracts.verifier.to_string(), &state.conf.contracts.old_verifier.to_string()] } // modified this to accommodate both verifiers
                     },
                     {
                         "field": "2507652182250236150756610039180649816461897572",
                         "verifier": &state.conf.contracts.pop_verifier.to_string()
                     }
                 ],
-                "token_id": &starknet_id, // using starknet_id
+                "token_id": &starknet_id,
                 "_chain.valid_to": null,
             }
         },
         doc! {
             "$group": {
-                "_id": "$field",
+                "_id": { "field": "$field", "verifier": "$verifier" }, // group by both field and verifier
                 "data": { "$first": "$data" }
             }
         },
@@ -111,20 +95,62 @@ pub async fn handler(
     let results = starknet_ids_data.aggregate(pipeline, None).await;
 
     let mut github = None;
+    let mut old_github = None; // added for old_verifier
     let mut twitter = None;
+    let mut old_twitter = None; // added for old_verifier
     let mut discord = None;
+    let mut old_discord = None; // added for old_verifier
     let mut proof_of_personhood = None;
 
     if let Ok(mut cursor) = results {
         while let Some(result) = cursor.next().await {
             if let Ok(doc) = result {
-                match doc.get_str("_id") {
-                    Ok("113702622229858") => github = doc.get_str("data").ok().map(String::from),
-                    Ok("32782392107492722") => twitter = doc.get_str("data").ok().map(String::from),
-                    Ok("28263441981469284") => discord = doc.get_str("data").ok().map(String::from),
-                    Ok("2507652182250236150756610039180649816461897572") => {
+                let field = doc.get_document("_id").unwrap().get_str("field").unwrap();
+                let verifier = doc
+                    .get_document("_id")
+                    .unwrap()
+                    .get_str("verifier")
+                    .unwrap();
+
+                // it's a bit ugly but it will get better when we removed the old verifier
+                match (field, verifier) {
+                    ("113702622229858", verifier)
+                        if verifier == &state.conf.contracts.verifier.to_string() =>
+                    {
+                        github = doc.get_str("data").ok().map(String::from)
+                    }
+                    ("113702622229858", verifier)
+                        if verifier == &state.conf.contracts.old_verifier.to_string() =>
+                    {
+                        old_github = doc.get_str("data").ok().map(String::from)
+                    }
+
+                    ("32782392107492722", verifier)
+                        if verifier == &state.conf.contracts.verifier.to_string() =>
+                    {
+                        twitter = doc.get_str("data").ok().map(String::from)
+                    }
+                    ("32782392107492722", verifier)
+                        if verifier == &state.conf.contracts.old_verifier.to_string() =>
+                    {
+                        old_twitter = doc.get_str("data").ok().map(String::from)
+                    }
+
+                    ("28263441981469284", verifier)
+                        if verifier == &state.conf.contracts.verifier.to_string() =>
+                    {
+                        discord = doc.get_str("data").ok().map(String::from)
+                    }
+                    ("28263441981469284", verifier)
+                        if verifier == &state.conf.contracts.old_verifier.to_string() =>
+                    {
+                        old_discord = doc.get_str("data").ok().map(String::from)
+                    }
+
+                    ("2507652182250236150756610039180649816461897572", _) => {
                         proof_of_personhood = doc.get_str("data").ok().map(String::from)
                     }
+
                     _ => {}
                 }
             }
@@ -151,8 +177,11 @@ pub async fn handler(
         is_owner_main,
         owner_addr,
         github,
+        old_github, // added this field
         twitter,
+        old_twitter, // added this field
         discord,
+        old_discord, // added this field
         proof_of_personhood,
         starknet_id,
     };

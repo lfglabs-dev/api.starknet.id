@@ -23,6 +23,7 @@ pub_struct!(Contracts {
     starknetid: FieldElement,
     naming: FieldElement,
     verifier: FieldElement,
+    old_verifier: FieldElement,
     pop_verifier: FieldElement,
 });
 
