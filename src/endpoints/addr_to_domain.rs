@@ -1,4 +1,7 @@
-use crate::{models::AppState, utils::get_error};
+use crate::{
+    models::AppState,
+    utils::{get_error, to_hex},
+};
 use axum::{
     extract::{Query, State},
     http::StatusCode,
@@ -26,12 +29,12 @@ pub async fn handler(
     Query(query): Query<AddrToDomainQuery>,
 ) -> impl IntoResponse {
     let domains = state.db.collection::<mongodb::bson::Document>("domains");
-    let dec_addr = query.addr.to_string();
+    let hex_addr = to_hex(&query.addr);
     let document = domains
         .find_one(
             doc! {
-                "addr": &dec_addr,
-                "rev_addr": &dec_addr,
+                "legacy_address": &hex_addr,
+                "rev_address": &hex_addr,
                 "_chain.valid_to": null,
             },
             None,

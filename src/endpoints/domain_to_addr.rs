@@ -11,7 +11,7 @@ use std::sync::Arc;
 #[derive(Serialize)]
 pub struct DomainToAddrData {
     addr: String,
-    domain_expiry: Option<i32>,
+    domain_expiry: Option<i64>,
 }
 
 #[derive(Deserialize)]
@@ -27,32 +27,8 @@ pub async fn handler(
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=60"));
 
     if query.domain.ends_with(".braavos.stark") || query.domain.ends_with(".xplorer.stark") {
-        let subdomains = state.db.collection::<mongodb::bson::Document>("subdomains");
-        let document = subdomains
-            .find_one(
-                doc! {
-                    "domain": &query.domain,
-                    "_chain.valid_to": null,
-                },
-                None,
-            )
-            .await;
-
-        match document {
-            Ok(doc) => {
-                if let Some(doc) = doc {
-                    let addr = doc.get_str("addr").unwrap_or_default().to_owned();
-                    let data = DomainToAddrData {
-                        addr,
-                        domain_expiry: None,
-                    };
-                    (StatusCode::OK, headers, Json(data)).into_response()
-                } else {
-                    get_error("no address found".to_string())
-                }
-            }
-            Err(_) => get_error("Error while fetching from database".to_string()),
-        }
+        // todo: handle subdomains
+        get_error("unhandled".to_string())
     } else {
         let domains = state.db.collection::<mongodb::bson::Document>("domains");
         let document = domains
@@ -68,8 +44,8 @@ pub async fn handler(
         match document {
             Ok(doc) => {
                 if let Some(doc) = doc {
-                    let addr = doc.get_str("addr").unwrap_or_default().to_owned();
-                    let domain_expiry = doc.get_i32("expiry").ok();
+                    let addr = doc.get_str("legacy_address").unwrap_or_default().to_owned();
+                    let domain_expiry = doc.get_i64("expiry").ok();
                     let data = DomainToAddrData {
                         addr,
                         domain_expiry,
