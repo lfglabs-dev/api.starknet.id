@@ -1,4 +1,7 @@
-use crate::{models::AppState, utils::get_error};
+use crate::{
+    models::AppState,
+    utils::{get_error, to_hex},
+};
 use axum::{
     extract::{Query, State},
     http::{HeaderMap, HeaderValue, StatusCode},
@@ -7,6 +10,7 @@ use axum::{
 use chrono::NaiveDateTime;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
+use starknet::core::types::FieldElement;
 use std::sync::Arc;
 
 #[derive(Serialize)]
@@ -14,7 +18,7 @@ pub struct TokenURI {
     name: String,
     description: String,
     image: String,
-    expiry: Option<i32>,
+    expiry: Option<i64>,
     attributes: Option<Vec<Attribute>>,
 }
 
@@ -26,7 +30,7 @@ pub struct Attribute {
 
 #[derive(Deserialize)]
 pub struct TokenIdQuery {
-    id: String,
+    id: FieldElement,
 }
 
 pub async fn handler(
@@ -38,7 +42,7 @@ pub async fn handler(
     let document = domains
         .find_one(
             doc! {
-                "token_id": &query.id,
+                "id": to_hex(&query.id),
                 "_chain.valid_to": null,
             },
             None,
@@ -52,7 +56,7 @@ pub async fn handler(
         Ok(doc) => {
             if let Some(doc) = doc {
                 let domain = doc.get_str("domain").unwrap_or_default().to_owned();
-                let expiry = doc.get_i32("expiry").unwrap_or_default();
+                let expiry = doc.get_i64("expiry").unwrap_or_default();
                 let token_uri = TokenURI {
                     name: domain.clone(),
                     description: "This token represents an identity on StarkNet.".to_string(),
