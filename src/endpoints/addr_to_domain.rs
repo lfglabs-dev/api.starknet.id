@@ -8,7 +8,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use mongodb::bson::doc;
+use mongodb::bson::{doc, Bson};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 use std::sync::Arc;
@@ -16,7 +16,7 @@ use std::sync::Arc;
 #[derive(Serialize)]
 pub struct AddrToDomainData {
     domain: String,
-    domain_expiry: i32,
+    domain_expiry: i64,
 }
 
 #[derive(Deserialize)]
@@ -35,7 +35,7 @@ pub async fn handler(
             doc! {
                 "legacy_address": &hex_addr,
                 "rev_address": &hex_addr,
-                "_chain.valid_to": null,
+                "_chain.valid_to": Bson::Null,
             },
             None,
         )
@@ -45,7 +45,7 @@ pub async fn handler(
         Ok(doc) => {
             if let Some(doc) = doc {
                 let domain = doc.get_str("domain").unwrap_or_default().to_owned();
-                let expiry = doc.get_i32("expiry").unwrap_or_default();
+                let expiry = doc.get_i64("expiry").unwrap_or_default();
                 let data = AddrToDomainData {
                     domain,
                     domain_expiry: expiry,

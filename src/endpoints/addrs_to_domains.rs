@@ -1,4 +1,7 @@
-use crate::{models::AppState, utils::get_error};
+use crate::{
+    models::AppState,
+    utils::{get_error, to_hex},
+};
 use axum::{
     extract::{Json, State},
     http::StatusCode,
@@ -28,25 +31,21 @@ pub async fn handler(
 ) -> impl IntoResponse {
     let domains = state.db.collection::<mongodb::bson::Document>("domains");
 
-    let addresses: Vec<String> = query
-        .addresses
-        .iter()
-        .map(|addr| addr.to_string())
-        .collect();
+    let addresses: Vec<String> = query.addresses.iter().map(|addr| to_hex(addr)).collect();
 
     let pipeline = vec![
         doc! {
             "$match": {
-                "addr": { "$in": addresses.clone() },
+                "legacy_address": { "$in": addresses.clone() },
                 "_chain.valid_to": null,
-                "$expr": { "$eq": ["$addr", "$rev_addr"] },
+                "$expr": { "$eq": ["$addr", "$rev_address"] },
             },
         },
         doc! {
             "$project": {
                 "_id": 0,
                 "domain": 1,
-                "address": "$addr",
+                "address": "$legacy_address",
             },
         },
     ];

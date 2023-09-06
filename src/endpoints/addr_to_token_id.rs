@@ -4,7 +4,7 @@ use axum::{
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Json},
 };
-use mongodb::bson::doc;
+use mongodb::bson::{doc, Bson};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -28,9 +28,9 @@ pub async fn handler(
     let document = domains
         .find_one(
             doc! {
-                "addr": addr,
-                "rev_addr": addr,
-                "_chain.valid_to": null,
+                "legacy_address": addr,
+                "rev_address": addr,
+                "_chain.valid_to": Bson::Null,
             },
             None,
         )
