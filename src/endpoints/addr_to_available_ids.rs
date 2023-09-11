@@ -35,7 +35,7 @@ pub async fn handler(
         .find(
             doc! {
                 "owner": &addr,
-                "_chain.valid_to": null,
+                "_cursor.to": null,
             },
             None,
         )
@@ -52,7 +52,7 @@ pub async fn handler(
                         .find_one(
                             doc! {
                                 "token_id": &token_id,
-                                "_chain.valid_to": null,
+                                "_cursor.to": null,
                             },
                             None,
                         )

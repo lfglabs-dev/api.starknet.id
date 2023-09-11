@@ -34,7 +34,7 @@ pub async fn handler(
             doc! {
                 "legacy_address": &addr,
                 "rev_address": &addr,
-                "_chain.valid_to": Bson::Null,
+                "_cursor.to": Bson::Null,
             },
             None,
         )

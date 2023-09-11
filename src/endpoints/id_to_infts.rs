@@ -31,7 +31,7 @@ pub async fn handler(
         .find(
             doc! {
                 "starknet_id": &query.id,
-                "_chain.valid_to": null,
+                "_cursor.to": null,
             },
             None,
         )

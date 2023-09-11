@@ -35,7 +35,7 @@ pub async fn handler(
             .find_one(
                 doc! {
                     "domain": &query.domain,
-                    "_chain.valid_to": null,
+                    "_cursor.to": null,
                 },
                 None,
             )

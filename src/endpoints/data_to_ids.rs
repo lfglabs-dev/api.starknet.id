@@ -34,7 +34,7 @@ pub async fn handler(
                 "verifier": &query.verifier,
                 "field": &query.field,
                 "data": &query.data,
-                "_chain.valid_to": null,
+                "_cursor.to": null,
             },
             None,
         )

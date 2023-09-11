@@ -1,6 +1,6 @@
 use crate::{
     models::{AppState, Data},
-    utils::get_error,
+    utils::{get_error, to_hex},
 };
 use axum::{
     extract::{Query, State},
@@ -8,13 +8,14 @@ use axum::{
     response::{IntoResponse, Json},
 };
 use futures::StreamExt;
-use mongodb::bson::{doc, Document};
+use mongodb::bson::{doc, Bson, Document};
 use serde::Deserialize;
+use starknet::core::types::FieldElement;
 use std::sync::Arc;
 
 #[derive(Deserialize)]
 pub struct IdQuery {
-    id: String,
+    id: FieldElement,
 }
 
 pub async fn handler(
@@ -29,11 +30,13 @@ pub async fn handler(
         .db
         .collection::<mongodb::bson::Document>("starknet_ids");
 
+    let hex_id = to_hex(&query.id);
+
     let domain_document = domains
         .find_one(
             doc! {
-                "token_id": &query.id,
-                "_chain.valid_to": null,
+                "id": &hex_id,
+                "_cursor.to": Bson::Null,
             },
             None,
         )
@@ -44,7 +47,7 @@ pub async fn handler(
             if let Some(doc) = doc {
                 let domain = doc.get_str("domain").unwrap_or_default().to_owned();
                 let addr = doc.get_str("addr").ok().map(String::from);
-                let expiry = doc.get_i32("expiry").ok();
+                let expiry = doc.get_i64("expiry").ok();
                 Some((domain, addr, expiry))
             } else {
                 None
@@ -56,8 +59,8 @@ pub async fn handler(
     let owner_document = starknet_ids
         .find_one(
             doc! {
-                "token_id": &query.id,
-                "_chain.valid_to": null,
+                "token_id": &hex_id,
+                "_cursor.to": null,
             },
             None,
         )
@@ -92,8 +95,8 @@ pub async fn handler(
                         "verifier": &state.conf.contracts.pop_verifier.to_string()
                     }
                 ],
-                "token_id": &query.id,
-                "_chain.valid_to": null,
+                "token_id": &hex_id,
+                "_cursor.to": null,
             }
         },
         doc! {
@@ -169,7 +172,7 @@ pub async fn handler(
                 "domain": &domain,
                 "addr": &owner,
                 "rev_addr": &owner,
-                "_chain.valid_to": null,
+                "_cursor.to": null,
             },
             None,
         )
@@ -188,7 +191,7 @@ pub async fn handler(
         old_github,
         old_twitter,
         old_discord,
-        starknet_id: query.id,
+        starknet_id: hex_id,
     };
 
     (StatusCode::OK, headers, Json(data)).into_response()

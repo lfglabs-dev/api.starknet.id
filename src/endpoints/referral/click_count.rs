@@ -54,7 +54,7 @@ pub async fn handler(
                         "$gt": BsonDateTime::from_millis(start_time.timestamp() * 1000),
                         "$lt": BsonDateTime::from_millis(end_time.timestamp() * 1000)
                     },
-                    "_chain.valid_to": Bson::Null,
+                    "_cursor.to": Bson::Null,
                 },
                 None,
             )

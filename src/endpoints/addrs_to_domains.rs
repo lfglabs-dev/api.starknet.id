@@ -37,7 +37,7 @@ pub async fn handler(
         doc! {
             "$match": {
                 "legacy_address": { "$in": addresses.clone() },
-                "_chain.valid_to": null,
+                "_cursor.to": null,
                 "$expr": { "$eq": ["$addr", "$rev_address"] },
             },
         },

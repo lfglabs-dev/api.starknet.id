@@ -43,7 +43,7 @@ pub async fn handler(
         .find_one(
             doc! {
                 "id": to_hex(&query.id),
-                "_chain.valid_to": null,
+                "_cursor.to": null,
             },
             None,
         )
