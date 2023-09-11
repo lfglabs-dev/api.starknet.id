@@ -11,7 +11,6 @@ use futures::stream::StreamExt;
 use mongodb::{bson::doc, options::AggregateOptions};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
-use std::str::FromStr;
 use std::sync::Arc;
 
 #[derive(Serialize)]
