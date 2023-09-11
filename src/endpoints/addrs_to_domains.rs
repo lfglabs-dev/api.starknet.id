@@ -17,7 +17,7 @@ use std::sync::Arc;
 #[derive(Serialize)]
 pub struct AddrToDomainData {
     domain: Option<String>,
-    address: FieldElement,
+    address: String,
 }
 
 #[derive(Deserialize)]
@@ -59,10 +59,7 @@ pub async fn handler(
             while let Some(doc) = cursor.next().await {
                 if let Ok(doc) = doc {
                     let domain = doc.get_str("domain").map(|s| s.to_string()).ok();
-                    let address = doc
-                        .get_str("address")
-                        .map(|s| FieldElement::from_str(s).unwrap())
-                        .unwrap();
+                    let address = doc.get_str("address").unwrap().to_string();
                     let data = AddrToDomainData { domain, address };
                     results.push(data);
                 }
@@ -75,7 +72,7 @@ pub async fn handler(
                 {
                     results.push(AddrToDomainData {
                         domain: None,
-                        address: FieldElement::from_str(address).unwrap(),
+                        address: address.clone(),
                     });
                 }
             }

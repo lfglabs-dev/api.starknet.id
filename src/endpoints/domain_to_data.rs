@@ -189,8 +189,8 @@ pub async fn handler(
         .find_one(
             doc! {
                 "domain": &domain,
-                "addr": &owner_addr,
-                "rev_addr": &owner_addr,
+                "legacy_address": &owner_addr,
+                "rev_address": &owner_addr,
                 "_cursor.to": null,
             },
             None,
