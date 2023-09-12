@@ -67,7 +67,6 @@ async fn main() {
         .route("/domain_to_addr", get(endpoints::domain_to_addr::handler))
         .route("/domain_to_data", get(endpoints::domain_to_data::handler))
         .route("/id_to_data", get(endpoints::id_to_data::handler))
-        .route("/id_to_infts", get(endpoints::id_to_infts::handler))
         .route("/uri", get(endpoints::uri::handler))
         .route(
             "/referral/add_click",

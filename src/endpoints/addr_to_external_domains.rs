@@ -31,7 +31,7 @@ pub async fn handler(
         .find(
             doc! {
                 "addr": addr,
-                "_chain.valid_to": null,
+                "_cursor.to": null,
             },
             None,
         )

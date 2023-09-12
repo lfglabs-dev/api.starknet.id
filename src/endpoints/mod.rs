@@ -8,6 +8,5 @@ pub mod data_to_ids;
 pub mod domain_to_addr;
 pub mod domain_to_data;
 pub mod id_to_data;
-pub mod id_to_infts;
 pub mod referral;
 pub mod uri;
