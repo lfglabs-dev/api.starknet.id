@@ -75,7 +75,6 @@ pub async fn handler(
 
     let (domain, addr, expiry) = domain_data.unwrap();
     let owner = owner.unwrap();
-    println!("hex_id: {}", hex_id);
     let pipeline = vec![
         doc! {
             "$match": {
@@ -117,8 +116,6 @@ pub async fn handler(
     if let Ok(mut cursor) = results {
         while let Some(result) = cursor.next().await {
             if let Ok(doc) = result {
-                println!("doc: {}", doc);
-
                 let field = doc
                     .get_document("_id")
                     .unwrap()
