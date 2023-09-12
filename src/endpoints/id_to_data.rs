@@ -86,7 +86,7 @@ pub async fn handler(
                         "verifier": { "$in": [ to_hex(&state.conf.contracts.verifier), to_hex(&state.conf.contracts.old_verifier)] } // modified this to accommodate both verifiers
                     },
                     {
-                        "field": "2507652182250236150756610039180649816461897572",
+                        "field": "0x0000000000000000000000000070726f6f665f6f665f706572736f6e686f6f64",
                         "verifier": to_hex(&state.conf.contracts.pop_verifier)
                     }
                 ],
@@ -126,6 +126,7 @@ pub async fn handler(
                     .unwrap()
                     .get_str("verifier")
                     .unwrap_or_default();
+
                 // it's a bit ugly but it will get better when we removed the old verifier
                 match (field, verifier) {
                     (
@@ -191,8 +192,13 @@ pub async fn handler(
                         })
                     }
 
-                    ("2507652182250236150756610039180649816461897572", _) => {
-                        proof_of_personhood = doc.get_str("data").ok().map(String::from)
+                    ("0x0000000000000000000000000070726f6f665f6f665f706572736f6e686f6f64", _)
+                        if verifier == to_hex(&state.conf.contracts.pop_verifier) =>
+                    {
+                        // ensure pop is valid
+                        proof_of_personhood = doc.get_str("data").ok()
+                        .and_then(| data |
+                             Some(data == "0x0000000000000000000000000000000000000000000000000000000000000001"));
                     }
 
                     _ => {}

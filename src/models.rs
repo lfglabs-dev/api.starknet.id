@@ -28,6 +28,6 @@ pub struct Data {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub old_discord: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub proof_of_personhood: Option<String>,
+    pub proof_of_personhood: Option<bool>,
     pub starknet_id: String,
 }
