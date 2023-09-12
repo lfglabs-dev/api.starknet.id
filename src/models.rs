@@ -10,7 +10,7 @@ pub struct AppState {
 
 #[derive(Serialize)]
 pub struct Data {
-    pub domain: String,
+    pub domain: Option<String>,
     pub addr: Option<String>,
     pub domain_expiry: Option<i64>,
     pub is_owner_main: bool,

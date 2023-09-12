@@ -69,11 +69,10 @@ pub async fn handler(
         Err(_) => return get_error("Error while fetching from database".to_string()),
     };
 
-    if domain_data.is_none() || owner.is_none() {
-        return get_error("no domain associated to this starknet id was found".to_string());
+    if owner.is_none() {
+        return get_error("starknet id not found".to_string());
     }
 
-    let (domain, addr, expiry) = domain_data.unwrap();
     let owner = owner.unwrap();
     let pipeline = vec![
         doc! {
@@ -207,32 +206,52 @@ pub async fn handler(
         }
     }
 
-    let is_owner_main_document = domains
-        .find_one(
-            doc! {
-                "domain": &domain,
-                "legacy_address": &owner,
-                "rev_address": &owner,
-                "_cursor.to": null,
-            },
-            None,
-        )
-        .await;
-    let is_owner_main = is_owner_main_document.is_ok() && is_owner_main_document.unwrap().is_some();
-    let data = Data {
-        domain,
-        addr,
-        domain_expiry: expiry,
-        is_owner_main,
-        owner_addr: owner,
-        github,
-        twitter,
-        discord,
-        proof_of_personhood,
-        old_github,
-        old_twitter,
-        old_discord,
-        starknet_id: query.id.to_string(),
+    let data = match domain_data {
+        None => Data {
+            domain: None,
+            addr: None,
+            domain_expiry: None,
+            is_owner_main: false,
+            owner_addr: owner,
+            github,
+            twitter,
+            discord,
+            proof_of_personhood,
+            old_github,
+            old_twitter,
+            old_discord,
+            starknet_id: query.id.to_string(),
+        },
+        Some((domain, addr, expiry)) => {
+            let is_owner_main_document = domains
+                .find_one(
+                    doc! {
+                        "domain": &domain,
+                        "legacy_address": &owner,
+                        "rev_address": &owner,
+                        "_cursor.to": null,
+                    },
+                    None,
+                )
+                .await;
+            let is_owner_main =
+                is_owner_main_document.is_ok() && is_owner_main_document.unwrap().is_some();
+            Data {
+                domain: Some(domain),
+                addr,
+                domain_expiry: expiry,
+                is_owner_main,
+                owner_addr: owner,
+                github,
+                twitter,
+                discord,
+                proof_of_personhood,
+                old_github,
+                old_twitter,
+                old_discord,
+                starknet_id: query.id.to_string(),
+            }
+        }
     };
 
     (StatusCode::OK, headers, Json(data)).into_response()

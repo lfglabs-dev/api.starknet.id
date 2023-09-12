@@ -204,7 +204,7 @@ pub async fn handler(
     let is_owner_main = is_owner_main_document.is_ok() && is_owner_main_document.unwrap().is_some();
 
     let data = Data {
-        domain,
+        domain: Some(domain),
         addr,
         domain_expiry: expiry,
         is_owner_main,
