@@ -10,8 +10,11 @@ pub struct AppState {
 
 #[derive(Serialize)]
 pub struct Data {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub domain: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub addr: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub domain_expiry: Option<i64>,
     pub is_owner_main: bool,
     pub owner_addr: String,
