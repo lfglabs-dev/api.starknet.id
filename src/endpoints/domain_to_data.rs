@@ -1,5 +1,6 @@
 use crate::{
     models::{AppState, Data},
+    resolving::get_custom_resolver,
     utils::{get_error, to_hex},
 };
 use axum::{
@@ -26,6 +27,14 @@ pub async fn handler(
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
 
     let domains = state.db.collection::<mongodb::bson::Document>("domains");
+    match get_custom_resolver(&domains, &query.domain).await {
+        None => {}
+        Some(res) => {
+            // todo: add support for argent and braavos here
+            return get_error(format!("custom resolver {} is not supported yet", res));
+        }
+    }
+
     let starknet_ids = state.db.collection::<mongodb::bson::Document>("id_owners");
 
     let domain_document = domains

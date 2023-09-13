@@ -1,45 +1,50 @@
 use mongodb::{
-    bson::{doc, Bson, Document},
+    bson::{doc, Document},
     Collection,
 };
 
-pub async fn has_no_custom_resolver(domains: &Collection<Document>, domain: &str) -> bool {
+pub async fn get_custom_resolver(domains: &Collection<Document>, domain: &str) -> Option<String> {
     // Split the domain into parts
     let domain_parts: Vec<&str> = domain.split('.').collect();
-    println!("domain: {}", domain);
     if domain_parts.len() <= 2 {
-        // The domain itself is a root domain, so we can directly return true
-        return true;
+        // The domain itself is a root domain, so no custom resolver can exist for it
+        return None;
     }
 
-    // Create an empty list of conditions
-    let mut conditions = vec![];
+    // Using the $or operator to match any of the conditions
+    let filter = doc! {
+        "$or": (1..domain_parts.len() - 1)
+        .rev()
+        .map(|i| domain_parts[i..].join("."))
+        .map(|domain_to_check| {
+            doc! {
+                "domain": domain_to_check,
+                "_cursor.to" : null,
+            }
+        })
+        .collect::<Vec<_>>()
+    };
 
-    // Create the conditions for all parent domains (excluding the root domain)
-    for i in 1..(domain_parts.len() - 1) {
-        // Starting from 1 to exclude the sub-domain itself
-        let domain_to_check = domain_parts[i..].join(".");
-        conditions.push(doc! {
-            "domain": domain_to_check,
-            "$or": [
-                { "resolver": Bson::Null },
-                { "resolver": "0x0000000000000000000000000000000000000000000000000000000000000000" }
-            ]
-        });
-    }
-
-    // Combine conditions with $or
-    let query = doc! { "$or": conditions };
-
-    // Search the database
-    match domains.find_one(query, None).await {
+    // Instead of looping through conditions, just query once using the filter
+    match domains.find_one(filter, None).await {
         Ok(doc) => {
-            // Return false if a domain with a custom resolver was found, true otherwise
-            doc.is_none()
+            if let Some(document) = doc {
+                // If the resolver field exists, is not null, and is not 0x000... then return it
+                if let Some(resolver) = document.get_str("resolver").ok() {
+                    if resolver
+                        != "0x0000000000000000000000000000000000000000000000000000000000000000"
+                        && !resolver.is_empty()
+                    {
+                        return Some(resolver.to_string());
+                    }
+                }
+            }
         }
-        Err(_) => {
-            // Logging the error or handling it in some way might be a good idea here
-            false
+        Err(err) => {
+            println!("err on custom_resolver: {}", err);
         }
     }
+
+    // If no custom resolver found
+    None
 }

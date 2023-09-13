@@ -1,6 +1,6 @@
 use crate::{
     models::{AppState, Data},
-    resolving::has_no_custom_resolver,
+    resolving::get_custom_resolver,
     utils::{get_error, to_hex},
 };
 use axum::{
@@ -45,7 +45,7 @@ pub async fn handler(
         Ok(doc) => {
             if let Some(doc) = doc {
                 let domain = doc.get_str("domain").unwrap_or_default().to_owned();
-                if has_no_custom_resolver(&domains, &domain).await {
+                if get_custom_resolver(&domains, &domain).await.is_none() {
                     let addr = doc.get_str("legacy_address").ok().map(String::from);
                     let expiry = doc.get_i64("expiry").ok();
                     Some((domain, addr, expiry))
