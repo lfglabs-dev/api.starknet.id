@@ -1,5 +1,6 @@
 use crate::{
     models::{AppState, Data},
+    resolving::has_no_custom_resolver,
     utils::{get_error, to_hex},
 };
 use axum::{
@@ -44,9 +45,14 @@ pub async fn handler(
         Ok(doc) => {
             if let Some(doc) = doc {
                 let domain = doc.get_str("domain").unwrap_or_default().to_owned();
-                let addr = doc.get_str("legacy_address").ok().map(String::from);
-                let expiry = doc.get_i64("expiry").ok();
-                Some((domain, addr, expiry))
+                if has_no_custom_resolver(&domains, &domain).await {
+                    let addr = doc.get_str("legacy_address").ok().map(String::from);
+                    let expiry = doc.get_i64("expiry").ok();
+                    Some((domain, addr, expiry))
+                } else {
+                    // we don't handle subdomains, todo: add support for braavos and argent
+                    None
+                }
             } else {
                 None
             }
@@ -69,11 +75,10 @@ pub async fn handler(
         Err(_) => return get_error("Error while fetching from database".to_string()),
     };
 
-    if domain_data.is_none() || owner.is_none() {
-        return get_error("no domain associated to this starknet id was found".to_string());
+    if owner.is_none() {
+        return get_error("starknet id not found".to_string());
     }
 
-    let (domain, addr, expiry) = domain_data.unwrap();
     let owner = owner.unwrap();
     let pipeline = vec![
         doc! {
@@ -86,7 +91,7 @@ pub async fn handler(
                         "verifier": { "$in": [ to_hex(&state.conf.contracts.verifier), to_hex(&state.conf.contracts.old_verifier)] } // modified this to accommodate both verifiers
                     },
                     {
-                        "field": "2507652182250236150756610039180649816461897572",
+                        "field": "0x0000000000000000000000000070726f6f665f6f665f706572736f6e686f6f64",
                         "verifier": to_hex(&state.conf.contracts.pop_verifier)
                     }
                 ],
@@ -126,6 +131,7 @@ pub async fn handler(
                     .unwrap()
                     .get_str("verifier")
                     .unwrap_or_default();
+
                 // it's a bit ugly but it will get better when we removed the old verifier
                 match (field, verifier) {
                     (
@@ -191,8 +197,13 @@ pub async fn handler(
                         })
                     }
 
-                    ("2507652182250236150756610039180649816461897572", _) => {
-                        proof_of_personhood = doc.get_str("data").ok().map(String::from)
+                    ("0x0000000000000000000000000070726f6f665f6f665f706572736f6e686f6f64", _)
+                        if verifier == to_hex(&state.conf.contracts.pop_verifier) =>
+                    {
+                        // ensure pop is valid
+                        proof_of_personhood = doc.get_str("data").ok()
+                        .and_then(| data |
+                             Some(data == "0x0000000000000000000000000000000000000000000000000000000000000001"));
                     }
 
                     _ => {}
@@ -201,32 +212,52 @@ pub async fn handler(
         }
     }
 
-    let is_owner_main_document = domains
-        .find_one(
-            doc! {
-                "domain": &domain,
-                "legacy_address": &owner,
-                "rev_address": &owner,
-                "_cursor.to": null,
-            },
-            None,
-        )
-        .await;
-    let is_owner_main = is_owner_main_document.is_ok() && is_owner_main_document.unwrap().is_some();
-    let data = Data {
-        domain,
-        addr,
-        domain_expiry: expiry,
-        is_owner_main,
-        owner_addr: owner,
-        github,
-        twitter,
-        discord,
-        proof_of_personhood,
-        old_github,
-        old_twitter,
-        old_discord,
-        starknet_id: query.id.to_string(),
+    let data = match domain_data {
+        None => Data {
+            domain: None,
+            addr: None,
+            domain_expiry: None,
+            is_owner_main: false,
+            owner_addr: owner,
+            github,
+            twitter,
+            discord,
+            proof_of_personhood,
+            old_github,
+            old_twitter,
+            old_discord,
+            starknet_id: query.id.to_string(),
+        },
+        Some((domain, addr, expiry)) => {
+            let is_owner_main_document = domains
+                .find_one(
+                    doc! {
+                        "domain": &domain,
+                        "legacy_address": &owner,
+                        "rev_address": &owner,
+                        "_cursor.to": null,
+                    },
+                    None,
+                )
+                .await;
+            let is_owner_main =
+                is_owner_main_document.is_ok() && is_owner_main_document.unwrap().is_some();
+            Data {
+                domain: Some(domain),
+                addr,
+                domain_expiry: expiry,
+                is_owner_main,
+                owner_addr: owner,
+                github,
+                twitter,
+                discord,
+                proof_of_personhood,
+                old_github,
+                old_twitter,
+                old_discord,
+                starknet_id: query.id.to_string(),
+            }
+        }
     };
 
     (StatusCode::OK, headers, Json(data)).into_response()
