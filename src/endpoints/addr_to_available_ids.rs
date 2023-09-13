@@ -1,4 +1,8 @@
-use crate::{models::AppState, utils::get_error};
+use crate::{
+    models::AppState,
+    resolving::get_custom_resolver,
+    utils::{get_error, to_hex},
+};
 use axum::{
     extract::{Query, State},
     http::StatusCode,
@@ -25,12 +29,9 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<AddrQuery>,
 ) -> impl IntoResponse {
-    let starknet_ids = state
-        .db
-        .collection::<mongodb::bson::Document>("starknet_ids");
+    let starknet_ids = state.db.collection::<mongodb::bson::Document>("id_owners");
     let domains = state.db.collection::<mongodb::bson::Document>("domains");
-
-    let addr = query.addr.to_string();
+    let addr = to_hex(&query.addr);
     let documents = starknet_ids
         .find(
             doc! {
@@ -47,21 +48,27 @@ pub async fn handler(
         Ok(mut cursor) => {
             while let Some(doc) = cursor.next().await {
                 if let Ok(doc) = doc {
-                    let token_id = doc.get_str("token_id").unwrap_or_default().to_owned();
+                    let token_id = doc.get_str("id").unwrap_or_default().to_owned();
                     let domain_doc = domains
                         .find_one(
                             doc! {
-                                "token_id": &token_id,
+                                "id": &token_id,
                                 "_cursor.to": null,
                             },
                             None,
                         )
                         .await;
 
-                    if let Ok(doc) = domain_doc {
-                        if doc.is_none() {
-                            ids.push(token_id);
+                    if let Ok(doc_opt) = domain_doc {
+                        if let Some(doc) = doc_opt {
+                            let domain_rs = doc.get_str("domain");
+                            if let Ok(domain) = domain_rs {
+                                if get_custom_resolver(&domains, domain).await.is_none() {
+                                    continue;
+                                }
+                            }
                         }
+                        ids.push(FieldElement::from_hex_be(&token_id).unwrap().to_string());
                     }
                 }
             }
