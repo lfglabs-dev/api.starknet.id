@@ -1,6 +1,7 @@
 mod config;
 mod endpoints;
 mod models;
+mod resolving;
 mod utils;
 use axum::{
     http::StatusCode,
