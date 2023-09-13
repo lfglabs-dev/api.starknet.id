@@ -50,6 +50,7 @@ pub async fn handler(
                     let expiry = doc.get_i64("expiry").ok();
                     Some((domain, addr, expiry))
                 } else {
+                    // we don't handle subdomains, todo: add support for braavos and argent
                     None
                 }
             } else {
