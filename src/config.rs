@@ -4,22 +4,22 @@ use std::env;
 use std::fs;
 
 macro_rules! pub_struct {
-    ($name:ident {$($field:ident: $t:ty,)*}) => {
-        #[derive(Clone, Deserialize)]
+    ($($derive:path),*; $name:ident {$($field:ident: $t:ty),* $(,)?}) => {
+        #[derive($($derive),*)]
         pub struct $name {
             $(pub $field: $t),*
         }
     }
 }
 
-pub_struct!(Server { port: u16, });
+pub_struct!(Clone, Deserialize; Server { port: u16 });
 
-pub_struct!(Database {
+pub_struct!(Clone, Deserialize; Database {
     name: String,
     connection_string: String,
 });
 
-pub_struct!(Contracts {
+pub_struct!(Clone, Deserialize; Contracts {
     starknetid: FieldElement,
     naming: FieldElement,
     verifier: FieldElement,
@@ -27,10 +27,16 @@ pub_struct!(Contracts {
     pop_verifier: FieldElement,
 });
 
-pub_struct!(Config {
+pub_struct!(Clone, Deserialize; Starkscan {
+    api_url: String,
+    api_key: String,
+});
+
+pub_struct!(Clone, Deserialize; Config {
     server: Server,
     database: Database,
     contracts: Contracts,
+    starkscan: Starkscan,
 });
 
 pub fn load() -> Config {
