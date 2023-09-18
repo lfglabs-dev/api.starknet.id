@@ -114,6 +114,10 @@ async fn main() {
             "/starkscan/fetch_nfts",
             get(endpoints::starkscan::fetch_nfts::handler),
         )
+        .route(
+            "/renewal/get_renewal_data",
+            get(endpoints::renewal::get_renewal_data::handler),
+        )
         .with_state(shared_state)
         .layer(cors);
 
