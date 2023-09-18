@@ -21,15 +21,15 @@ pub async fn handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=60"));
 
     let domain_collection = state.db.collection::<mongodb::bson::Document>("domains");
-    let current = (chrono::Utc::now().timestamp_millis() / 100_000) * 100;
+    let current = chrono::Utc::now().timestamp();
 
     let pipeline = vec![
         doc! {
             "$match": {
                 "_cursor.to": null,
-                // "expiry": {
-                //     "$lte": current,
-                // }
+                "expiry": {
+                    "$lte": current,
+                }
             }
         },
         doc! {
