@@ -23,7 +23,7 @@ pub async fn handler(
     Json(query): Json<AddClickQuery>,
 ) -> impl IntoResponse {
     let sponsor_usage = state
-        .db
+        .starknetid_db
         .collection::<mongodb::bson::Document>("sponsor_usage");
     let update_options = UpdateOptions::builder().upsert(true).build();
 

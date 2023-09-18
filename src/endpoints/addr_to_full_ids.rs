@@ -40,7 +40,7 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<AddrQuery>,
 ) -> impl IntoResponse {
-    let id_owners = state.db.collection::<mongodb::bson::Document>("id_owners");
+    let id_owners = state.starknetid_db.collection::<mongodb::bson::Document>("id_owners");
 
     let pipeline = vec![
         doc! {
