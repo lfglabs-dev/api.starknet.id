@@ -30,7 +30,7 @@ pub async fn handler(
         // todo: handle subdomains
         get_error("unhandled".to_string())
     } else {
-        let domains = state.db.collection::<mongodb::bson::Document>("domains");
+        let domains = state.starknetid_db.collection::<mongodb::bson::Document>("domains");
         let document = domains
             .find_one(
                 doc! {

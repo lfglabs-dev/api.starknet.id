@@ -37,7 +37,7 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<TokenIdQuery>,
 ) -> impl IntoResponse {
-    let domains = state.db.collection::<mongodb::bson::Document>("domains");
+    let domains = state.starknetid_db.collection::<mongodb::bson::Document>("domains");
 
     let document = domains
         .find_one(

@@ -23,7 +23,7 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<DomainQuery>,
 ) -> impl IntoResponse {
-    let subdomains = state.db.collection::<mongodb::bson::Document>("subdomains");
+    let subdomains = state.starknetid_db.collection::<mongodb::bson::Document>("subdomains");
     let addr = &query.addr;
     let mut domains_list = Vec::new();
 

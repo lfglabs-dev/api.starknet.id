@@ -14,7 +14,17 @@ macro_rules! pub_struct {
 
 pub_struct!(Server { port: u16, });
 
-pub_struct!(Database {
+pub_struct!(Databases {
+    starknetid: StarknetidDb,
+    sales: SalesDb,
+});
+
+pub_struct!(StarknetidDb {
+    name: String,
+    connection_string: String,
+});
+
+pub_struct!(SalesDb {
     name: String,
     connection_string: String,
 });
@@ -29,7 +39,7 @@ pub_struct!(Contracts {
 
 pub_struct!(Config {
     server: Server,
-    database: Database,
+    databases: Databases,
     contracts: Contracts,
 });
 

@@ -5,7 +5,8 @@ use serde::Serialize;
 
 pub struct AppState {
     pub conf: Config,
-    pub db: Database,
+    pub starknetid_db: Database,
+    pub sales_db: Database,
 }
 
 #[derive(Serialize)]

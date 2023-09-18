@@ -30,7 +30,7 @@ pub async fn handler(
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
 
     let referral_revenues = state
-        .db
+        .starknetid_db
         .collection::<mongodb::bson::Document>("referral_revenues");
 
     let mut output = Data { revenues: vec![] };

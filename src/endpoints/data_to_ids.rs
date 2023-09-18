@@ -25,7 +25,7 @@ pub async fn handler(
     Query(query): Query<StarknetIdQuery>,
 ) -> impl IntoResponse {
     let ids_data = state
-        .db
+        .starknetid_db
         .collection::<mongodb::bson::Document>("starknet_ids_data");
 
     let document = ids_data

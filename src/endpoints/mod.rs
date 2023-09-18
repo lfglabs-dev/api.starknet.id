@@ -7,6 +7,7 @@ pub mod addrs_to_domains;
 pub mod data_to_ids;
 pub mod domain_to_addr;
 pub mod domain_to_data;
+pub mod galxe;
 pub mod id_to_data;
 pub mod referral;
 pub mod uri;

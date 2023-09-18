@@ -29,8 +29,8 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<AddrQuery>,
 ) -> impl IntoResponse {
-    let starknet_ids = state.db.collection::<mongodb::bson::Document>("id_owners");
-    let domains = state.db.collection::<mongodb::bson::Document>("domains");
+    let starknet_ids = state.starknetid_db.collection::<mongodb::bson::Document>("id_owners");
+    let domains = state.starknetid_db.collection::<mongodb::bson::Document>("domains");
     let addr = to_hex(&query.addr);
     let documents = starknet_ids
         .find(

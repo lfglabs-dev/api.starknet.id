@@ -26,8 +26,8 @@ pub async fn handler(
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
 
-    let domains = state.db.collection::<mongodb::bson::Document>("domains");
-    let starknet_ids = state.db.collection::<mongodb::bson::Document>("id_owners");
+    let domains = state.starknetid_db.collection::<mongodb::bson::Document>("domains");
+    let starknet_ids = state.starknetid_db.collection::<mongodb::bson::Document>("id_owners");
 
     let hex_id = to_hex(&query.id);
 
@@ -107,7 +107,7 @@ pub async fn handler(
         },
     ];
 
-    let starknet_ids_data = state.db.collection::<Document>("id_verifier_data");
+    let starknet_ids_data = state.starknetid_db.collection::<Document>("id_verifier_data");
     let results = starknet_ids_data.aggregate(pipeline, None).await;
 
     let mut github = None;

@@ -18,18 +18,27 @@ use tower_http::cors::{Any, CorsLayer};
 async fn main() {
     println!("starknetid_server: starting v{}", env!("CARGO_PKG_VERSION"));
     let conf = config::load();
-    let client_options = ClientOptions::parse(&conf.database.connection_string)
+
+    let starknetid_client_options =
+        ClientOptions::parse(&conf.databases.starknetid.connection_string)
+            .await
+            .unwrap();
+
+    let sales_client_options = ClientOptions::parse(&conf.databases.sales.connection_string)
         .await
         .unwrap();
 
     let shared_state = Arc::new(models::AppState {
         conf: conf.clone(),
-        db: Client::with_options(client_options)
+        starknetid_db: Client::with_options(starknetid_client_options)
             .unwrap()
-            .database(&conf.database.name),
+            .database(&conf.databases.starknetid.name),
+        sales_db: Client::with_options(sales_client_options)
+            .unwrap()
+            .database(&conf.databases.sales.name),
     });
     if shared_state
-        .db
+        .starknetid_db
         .run_command(doc! {"ping": 1}, None)
         .await
         .is_err()
@@ -85,6 +94,7 @@ async fn main() {
             "/referral/click_count",
             get(endpoints::referral::click_count::handler),
         )
+        .route("/galxe/verify", post(endpoints::galxe::verify::handler))
         .with_state(shared_state)
         .layer(cors);
 
