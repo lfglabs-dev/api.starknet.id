@@ -37,16 +37,14 @@ async fn main() {
             .unwrap()
             .database(&conf.databases.sales.name),
     });
-    if shared_state
-        .starknetid_db
-        .run_command(doc! {"ping": 1}, None)
-        .await
-        .is_err()
-    {
-        println!("error: unable to connect to database");
-        return;
-    } else {
-        println!("database: connected")
+    // we will know by looking at the log number which db has an issue
+    for db in [&shared_state.starknetid_db, &shared_state.sales_db] {
+        if db.run_command(doc! {"ping": 1}, None).await.is_err() {
+            println!("error: unable to connect to a database");
+            return;
+        } else {
+            println!("database: connected")
+        }
     }
 
     let cors = CorsLayer::new().allow_headers(Any).allow_origin(Any);
