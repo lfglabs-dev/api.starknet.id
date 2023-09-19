@@ -10,4 +10,7 @@ pub mod domain_to_data;
 pub mod galxe;
 pub mod id_to_data;
 pub mod referral;
+pub mod renewal;
+pub mod starkscan;
+pub mod stats;
 pub mod uri;

@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 mod config;
 mod endpoints;
 mod models;
@@ -91,6 +93,38 @@ async fn main() {
         .route(
             "/referral/click_count",
             get(endpoints::referral::click_count::handler),
+        )
+        .route(
+            "/stats/count_addrs",
+            get(endpoints::stats::count_addrs::handler),
+        )
+        .route(
+            "/stats/count_club_domains",
+            get(endpoints::stats::count_club_domains::handler),
+        )
+        .route(
+            "/stats/count_domains",
+            get(endpoints::stats::count_domains::handler),
+        )
+        .route(
+            "/stats/count_ids",
+            get(endpoints::stats::count_ids::handler),
+        )
+        .route(
+            "/stats/count_created",
+            get(endpoints::stats::count_created::handler),
+        )
+        .route(
+            "/stats/expired_club_domains",
+            get(endpoints::stats::expired_club_domains::handler),
+        )
+        .route(
+            "/starkscan/fetch_nfts",
+            get(endpoints::starkscan::fetch_nfts::handler),
+        )
+        .route(
+            "/renewal/get_renewal_data",
+            get(endpoints::renewal::get_renewal_data::handler),
         )
         .route("/galxe/verify", post(endpoints::galxe::verify::handler))
         .with_state(shared_state)

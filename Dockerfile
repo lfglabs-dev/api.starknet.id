@@ -10,14 +10,21 @@ COPY Cargo.toml Cargo.lock config.toml ./
 # Copy the source code
 COPY src ./src
 
-# Build the application in release mode
-RUN cargo build --release
+# Accept a build argument for the build mode
+ARG BUILD_MODE=release
 
-# Expose the port your application uses (replace 8083 with your app's port)
+# Build the application based on the build mode
+RUN if [ "$BUILD_MODE" = "debug" ]; then \
+    cargo build; \
+else \
+    cargo build --release; \
+fi
+
+# Expose the port your application uses
 EXPOSE 8080
 
 # Set the unbuffered environment variable
 ENV RUST_BACKTRACE "1"
 
-# Run the binary
-CMD ["./target/release/starknetid_server"]
+# Run the binary conditionally based on the build mode
+CMD if [ "$BUILD_MODE" = "debug" ]; then ./target/debug/starknetid_server; else ./target/release/starknetid_server; fi
