@@ -3,6 +3,7 @@
 mod config;
 mod endpoints;
 mod models;
+mod resolving;
 mod utils;
 use axum::{
     http::StatusCode,
@@ -19,26 +20,33 @@ use tower_http::cors::{Any, CorsLayer};
 async fn main() {
     println!("starknetid_server: starting v{}", env!("CARGO_PKG_VERSION"));
     let conf = config::load();
-    let client_options = ClientOptions::parse(&conf.database.connection_string)
+
+    let starknetid_client_options =
+        ClientOptions::parse(&conf.databases.starknetid.connection_string)
+            .await
+            .unwrap();
+
+    let sales_client_options = ClientOptions::parse(&conf.databases.sales.connection_string)
         .await
         .unwrap();
 
     let shared_state = Arc::new(models::AppState {
         conf: conf.clone(),
-        db: Client::with_options(client_options)
+        starknetid_db: Client::with_options(starknetid_client_options)
             .unwrap()
-            .database(&conf.database.name),
+            .database(&conf.databases.starknetid.name),
+        sales_db: Client::with_options(sales_client_options)
+            .unwrap()
+            .database(&conf.databases.sales.name),
     });
-    if shared_state
-        .db
-        .run_command(doc! {"ping": 1}, None)
-        .await
-        .is_err()
-    {
-        println!("error: unable to connect to database");
-        return;
-    } else {
-        println!("database: connected")
+    // we will know by looking at the log number which db has an issue
+    for db in [&shared_state.starknetid_db, &shared_state.sales_db] {
+        if db.run_command(doc! {"ping": 1}, None).await.is_err() {
+            println!("error: unable to connect to a database");
+            return;
+        } else {
+            println!("database: connected")
+        }
     }
 
     let cors = CorsLayer::new().allow_headers(Any).allow_origin(Any);
@@ -118,6 +126,7 @@ async fn main() {
             "/renewal/get_renewal_data",
             get(endpoints::renewal::get_renewal_data::handler),
         )
+        .route("/galxe/verify", post(endpoints::galxe::verify::handler))
         .with_state(shared_state)
         .layer(cors);
 

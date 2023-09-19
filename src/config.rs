@@ -14,6 +14,11 @@ macro_rules! pub_struct {
 
 pub_struct!(Clone, Deserialize; Server { port: u16 });
 
+pub_struct!(Databases {
+    starknetid: Database,
+    sales: Database,
+});
+
 pub_struct!(Clone, Deserialize; Database {
     name: String,
     connection_string: String,
@@ -34,7 +39,7 @@ pub_struct!(Clone, Deserialize; Starkscan {
 
 pub_struct!(Clone, Deserialize; Config {
     server: Server,
-    database: Database,
+    databases: Databases,
     contracts: Contracts,
     starkscan: Starkscan,
 });

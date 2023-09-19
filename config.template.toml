@@ -1,8 +1,12 @@
 [server]
 port = 8080
 
-[database]
+[databases]
+[databases.starknetid]
 name = "starknetid"
+connection_string = "xxxxxx"
+[databases.sales]
+name = "sales"
 connection_string = "xxxxxx"
 
 [contracts]

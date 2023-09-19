@@ -28,7 +28,7 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Json(query): Json<AddrToDomainsQuery>,
 ) -> impl IntoResponse {
-    let domains = state.db.collection::<mongodb::bson::Document>("domains");
+    let domains = state.starknetid_db.collection::<mongodb::bson::Document>("domains");
 
     let addresses: Vec<String> = query.addresses.iter().map(|addr| to_hex(addr)).collect();
 
@@ -37,7 +37,7 @@ pub async fn handler(
             "$match": {
                 "legacy_address": { "$in": addresses.clone() },
                 "_cursor.to": null,
-                "$expr": { "$eq": ["$addr", "$rev_address"] },
+                "$expr": { "$eq": ["$legacy_address", "$rev_address"] },
             },
         },
         doc! {

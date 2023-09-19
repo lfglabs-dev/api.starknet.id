@@ -1,5 +1,6 @@
 use crate::{
     models::{AppState, Data},
+    resolving::get_custom_resolver,
     utils::{get_error, to_hex},
 };
 use axum::{
@@ -25,8 +26,16 @@ pub async fn handler(
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
 
-    let domains = state.db.collection::<mongodb::bson::Document>("domains");
-    let starknet_ids = state.db.collection::<mongodb::bson::Document>("id_owners");
+    let domains = state.starknetid_db.collection::<mongodb::bson::Document>("domains");
+    match get_custom_resolver(&domains, &query.domain).await {
+        None => {}
+        Some(res) => {
+            // todo: add support for argent and braavos here
+            return get_error(format!("custom resolver {} is not supported yet", res));
+        }
+    }
+
+    let starknet_ids = state.starknetid_db.collection::<mongodb::bson::Document>("id_owners");
 
     let domain_document = domains
         .find_one(
@@ -73,7 +82,7 @@ pub async fn handler(
                         "verifier": { "$in": [ to_hex(&state.conf.contracts.verifier), to_hex(&state.conf.contracts.old_verifier)] } // modified this to accommodate both verifiers
                     },
                     {
-                        "field": "2507652182250236150756610039180649816461897572",
+                        "field": "0x0000000000000000000000000070726f6f665f6f665f706572736f6e686f6f64",
                         "verifier": to_hex(&state.conf.contracts.pop_verifier)
                     }
                 ],
@@ -89,7 +98,7 @@ pub async fn handler(
         },
     ];
 
-    let starknet_ids_data = state.db.collection::<Document>("id_verifier_data");
+    let starknet_ids_data = state.starknetid_db.collection::<Document>("id_verifier_data");
     let results = starknet_ids_data.aggregate(pipeline, None).await;
 
     let mut github = None;
@@ -175,8 +184,13 @@ pub async fn handler(
                         })
                     }
 
-                    ("2507652182250236150756610039180649816461897572", _) => {
-                        proof_of_personhood = doc.get_str("data").ok().map(String::from)
+                    ("0x0000000000000000000000000070726f6f665f6f665f706572736f6e686f6f64", _)
+                        if verifier == to_hex(&state.conf.contracts.pop_verifier) =>
+                    {
+                        // ensure pop is valid
+                        proof_of_personhood = doc.get_str("data").ok()
+                        .and_then(| data |
+                             Some(data == "0x0000000000000000000000000000000000000000000000000000000000000001"));
                     }
 
                     _ => {}
@@ -199,7 +213,7 @@ pub async fn handler(
     let is_owner_main = is_owner_main_document.is_ok() && is_owner_main_document.unwrap().is_some();
 
     let data = Data {
-        domain,
+        domain: Some(domain),
         addr,
         domain_expiry: expiry,
         is_owner_main,
