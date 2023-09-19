@@ -20,7 +20,9 @@ pub async fn handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=60"));
 
-    let domain_collection = state.db.collection::<mongodb::bson::Document>("domains");
+    let domain_collection = state
+        .starknetid_db
+        .collection::<mongodb::bson::Document>("domains");
     let current = chrono::Utc::now().timestamp();
 
     let pipeline = vec![

@@ -29,7 +29,7 @@ pub async fn handler(
     Query(query): Query<StarknetIdQuery>,
 ) -> impl IntoResponse {
     let renew_collection = state
-        .db
+        .starknetid_db
         .collection::<mongodb::bson::Document>("auto_renew_flows");
 
     let documents = renew_collection

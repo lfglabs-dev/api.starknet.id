@@ -14,7 +14,7 @@ macro_rules! pub_struct {
 
 pub_struct!(Clone, Deserialize; Server { port: u16 });
 
-pub_struct!(Databases {
+pub_struct!(Clone, Deserialize; Databases {
     starknetid: Database,
     sales: Database,
 });

@@ -26,7 +26,7 @@ pub async fn handler(
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=60"));
 
-    let domain_collection = state.db.collection::<mongodb::bson::Document>("domains");
+    let domain_collection = state.starknetid_db.collection::<mongodb::bson::Document>("domains");
     let filter = doc! {
         "expiry": { "$gte": chrono::Utc::now().timestamp() },
         "creation_date": { "$gte": query.since },
