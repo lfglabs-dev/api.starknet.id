@@ -17,5 +17,5 @@ old_verifier = "0xXXXXXXXXXXXX"
 pop_verifier = "0xXXXXXXXXXXXX"
 
 [starkscan]
-api_url = "https://api-testnet..starkscan.co/api/v0/"
+api_url = "https://api-testnet.starkscan.co/api/v0/"
 api_key="xxxxxx"
