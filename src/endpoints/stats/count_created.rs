@@ -6,7 +6,7 @@ use axum::{
     Json,
 };
 use futures::StreamExt;
-use mongodb::bson::doc;
+use mongodb::bson::{doc, Bson};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -35,12 +35,17 @@ pub async fn handler(
         let mut headers = HeaderMap::new();
         headers.insert("Cache-Control", HeaderValue::from_static("max-age=60"));
 
-        let domain_collection = state.starknetid_db.collection::<mongodb::bson::Document>("domains");
+        let domain_collection = state
+            .starknetid_db
+            .collection::<mongodb::bson::Document>("domains");
 
         let pipeline = vec![
             doc! {
                 "$match": {
-                    "_cursor.to": null,
+                    "$or": [
+                        { "_cursor.to": { "$exists": false } },
+                        { "_cursor.to": Bson::Null },
+                    ],
                     "creation_date": {
                         "$gte": begin_time,
                         "$lte": end_time

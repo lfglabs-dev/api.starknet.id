@@ -6,7 +6,7 @@ use axum::{
     Json,
 };
 use futures::TryStreamExt;
-use mongodb::bson::{self, doc};
+use mongodb::bson::{self, doc, Bson};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::collections::HashMap;
@@ -39,7 +39,10 @@ pub async fn handler(
             vec![
                 doc! {
                     "$match": {
-                        "_cursor.to": null,
+                        "$or": [
+                            { "_cursor.to": { "$exists": false } },
+                            { "_cursor.to": Bson::Null },
+                        ],
                         // todo: uncomment when there is a creation_date in the collection custom_resolutions
                         // "creation_date": {
                         //     "$gte": query.since,
@@ -89,10 +92,13 @@ pub async fn handler(
     let db_output = domain_collection.aggregate(vec![
             doc! {
                 "$match": {
-                    "_cursor.to": null,
                     "creation_date": {
                         "$gte": query.since,
-                    }
+                    },
+                    "$or": [
+                        { "_cursor.to": { "$exists": false } },
+                        { "_cursor.to": Bson::Null },
+                    ],
                 }
             },
             doc! {

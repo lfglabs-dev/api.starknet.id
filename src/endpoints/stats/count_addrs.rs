@@ -6,7 +6,7 @@ use axum::{
     Json,
 };
 use futures::StreamExt;
-use mongodb::bson::doc;
+use mongodb::bson::{doc, Bson};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -33,7 +33,13 @@ pub async fn handler(
     let aggregate_cursor = domain_collection
         .aggregate(
             vec![
-                doc! { "$match": { "_cursor.to": null, "creation_date": { "$gte": query.since } }},
+                doc! { "$match": {
+                    "creation_date": { "$gte": query.since },
+                    "$or": [
+                        { "_cursor.to": { "$exists": false } },
+                        { "_cursor.to": Bson::Null },
+                    ],
+                }},
                 doc! { "$group": { "_id": "$legacy_address" }},
                 doc! { "$count": "total" },
             ],

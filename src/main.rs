@@ -126,6 +126,10 @@ async fn main() {
             "/renewal/get_renewal_data",
             get(endpoints::renewal::get_renewal_data::handler),
         )
+        .route(
+            "/renewal/get_metahash",
+            get(endpoints::renewal::get_metahash::handler),
+        )
         .route("/galxe/verify", post(endpoints::galxe::verify::handler))
         .with_state(shared_state)
         .layer(cors);
