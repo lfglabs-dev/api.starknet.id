@@ -119,6 +119,10 @@ async fn main() {
             get(endpoints::stats::expired_club_domains::handler),
         )
         .route(
+            "/stats/count_renewed",
+            get(endpoints::stats::count_renewed::handler),
+        )
+        .route(
             "/starkscan/fetch_nfts",
             get(endpoints::starkscan::fetch_nfts::handler),
         )
