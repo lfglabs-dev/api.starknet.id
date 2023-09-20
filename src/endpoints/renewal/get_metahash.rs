@@ -7,8 +7,10 @@ use axum::{
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Json},
 };
-use futures::StreamExt;
-use mongodb::bson::{doc, Bson};
+use mongodb::{
+    bson::{doc, Bson},
+    options::FindOneOptions,
+};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 use std::sync::Arc;
@@ -31,8 +33,11 @@ pub async fn handler(
         .sales_db
         .collection::<mongodb::bson::Document>("sales");
 
-    let documents = renew_collection
-        .find(
+    let find_options = FindOneOptions::builder()
+        .sort(doc! { "timestamp": -1 })
+        .build();
+    let document = renew_collection
+        .find_one(
             doc! {
                 "payer": to_hex(&query.addr),
                 "$or": [
@@ -40,37 +45,27 @@ pub async fn handler(
                     { "_cursor.to": Bson::Null },
                 ],
             },
-            None,
+            find_options,
         )
         .await;
 
-    match documents {
-        Ok(mut cursor) => {
+    if let Ok(sales_doc) = document {
+        if let Some(doc) = sales_doc {
             let mut headers = HeaderMap::new();
             headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
-
-            if let Some(result) = cursor.next().await {
-                match result {
-                    Ok(res) => {
-                        let meta_hash_str = res.get_str("meta_hash").unwrap();
-                        let res = GetMetaHashData {
-                            meta_hash: meta_hash_str.to_string(),
-                        };
-                        (StatusCode::OK, headers, Json(res)).into_response()
-                    }
-                    Err(e) => get_error(format!("Error while processing the document: {:?}", e)),
+            match doc.get_str("meta_hash") {
+                Ok(meta_hash_str) => {
+                    let res = GetMetaHashData {
+                        meta_hash: meta_hash_str.to_string(),
+                    };
+                    (StatusCode::OK, headers, Json(res)).into_response()
                 }
-            } else {
-                (
-                    StatusCode::OK,
-                    headers,
-                    Json(GetMetaHashData {
-                        meta_hash: "".to_string(),
-                    }),
-                )
-                    .into_response()
+                Err(e) => get_error(format!("No meta_hash found: {:?}", e)),
             }
+        } else {
+            get_error("No results found".to_string())
         }
-        Err(_) => get_error("Error while fetching from database".to_string()),
+    } else {
+        get_error("Error while fetching from database".to_string())
     }
 }
