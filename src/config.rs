@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use starknet::core::types::FieldElement;
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 
@@ -42,6 +43,7 @@ pub_struct!(Clone, Deserialize; Config {
     databases: Databases,
     contracts: Contracts,
     starkscan: Starkscan,
+    custom_resolvers: HashMap<String, Vec<String>>,
 });
 
 pub fn load() -> Config {

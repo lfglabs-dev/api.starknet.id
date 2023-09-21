@@ -1,4 +1,7 @@
-use crate::{models::AppState, utils::get_error};
+use crate::{
+    models::AppState,
+    utils::{get_error, to_hex},
+};
 use axum::{
     extract::{Query, State},
     http::{HeaderMap, HeaderValue, StatusCode},
@@ -7,6 +10,7 @@ use axum::{
 use futures::StreamExt;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
+use starknet::core::types::FieldElement;
 use std::sync::Arc; // for stream handling
 
 #[derive(Serialize)]
@@ -16,21 +20,24 @@ pub struct DomainData {
 
 #[derive(Deserialize)]
 pub struct DomainQuery {
-    addr: String,
+    addr: FieldElement,
 }
 
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<DomainQuery>,
 ) -> impl IntoResponse {
-    let subdomains = state.starknetid_db.collection::<mongodb::bson::Document>("subdomains");
+    let subdomains = state
+        .starknetid_db
+        .collection::<mongodb::bson::Document>("custom_resolutions");
     let addr = &query.addr;
     let mut domains_list = Vec::new();
 
     let cursor = subdomains
         .find(
             doc! {
-                "addr": addr,
+                "field" : "starknet",
+                "value": to_hex(addr),
                 "_cursor.to": null,
             },
             None,
@@ -42,8 +49,21 @@ pub async fn handler(
             while let Some(result) = cursor.next().await {
                 match result {
                     Ok(doc) => {
-                        let domain = doc.get_str("domain").unwrap_or_default().to_owned();
-                        domains_list.push(domain);
+                        let domain_slice =
+                            doc.get_str("domain_slice").unwrap_or_default().to_owned();
+                        let resolver =
+                            FieldElement::from_hex_be(doc.get_str("resolver").unwrap_or_default())
+                                .unwrap();
+                        match state.conf.custom_resolvers.get(&to_hex(&resolver)) {
+                            // a resolver can be associated to multiple domains, eg: argent.stark and ag.stark
+                            Some(parents) => {
+                                parents.iter().for_each(|parent| {
+                                    // we automatically add all domains
+                                    domains_list.push(format!("{}{}", domain_slice, parent));
+                                });
+                            }
+                            None => {}
+                        }
                     }
                     Err(_) => return get_error("Error while fetching from database".to_string()),
                 }
