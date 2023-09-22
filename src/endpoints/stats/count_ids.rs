@@ -5,7 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use mongodb::bson::doc;
+use mongodb::bson::{doc, Bson};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -32,7 +32,10 @@ pub async fn handler(
     let filter = doc! {
         "expiry": { "$gte": chrono::Utc::now().timestamp() },
         "creation_date": { "$gte": query.since },
-        "_cursor.to": { "$eq": null },
+        "$or": [
+            { "_cursor.to": { "$exists": false } },
+            { "_cursor.to": Bson::Null },
+        ],
     };
 
     let total = domain_collection.count_documents(filter, None).await;

@@ -37,7 +37,10 @@ pub async fn handler(
             doc! {
                 "renewer_address": to_hex(&query.addr),
                 "domain": query.domain,
-                "_cursor.to": null,
+                "$or": [
+                    { "_cursor.to": { "$exists": false } },
+                    { "_cursor.to": null },
+                ],
             },
             None,
         )

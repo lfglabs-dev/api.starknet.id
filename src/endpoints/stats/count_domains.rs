@@ -5,7 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use mongodb::bson::doc;
+use mongodb::bson::{doc, Bson};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -26,11 +26,16 @@ pub async fn handler(
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=60"));
 
-    let domain_collection = state.starknetid_db.collection::<mongodb::bson::Document>("domains");
+    let domain_collection = state
+        .starknetid_db
+        .collection::<mongodb::bson::Document>("domains");
     let filter = doc! {
         "expiry": { "$gte": chrono::Utc::now().timestamp() },
         "creation_date": { "$gte": query.since },
-        "_cursor.to": { "$eq": null },
+        "$or": [
+            { "_cursor.to": { "$exists": false } },
+            { "_cursor.to": Bson::Null },
+        ],
     };
 
     let total = domain_collection.count_documents(filter, None).await;

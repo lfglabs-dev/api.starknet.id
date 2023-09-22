@@ -11,13 +11,13 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 #[derive(Serialize)]
-pub struct CountCreatedData {
+pub struct CountRenewedData {
     from: i64,
     count: i32,
 }
 
 #[derive(Deserialize)]
-pub struct CountCreatedQuery {
+pub struct CountRenewedQuery {
     begin: i64,
     end: i64,
     segments: i64,
@@ -25,7 +25,7 @@ pub struct CountCreatedQuery {
 
 pub async fn handler(
     State(state): State<Arc<AppState>>,
-    Query(query): Query<CountCreatedQuery>,
+    Query(query): Query<CountRenewedQuery>,
 ) -> impl IntoResponse {
     let begin_time = query.begin;
     let end_time = query.end;
@@ -37,7 +37,7 @@ pub async fn handler(
 
         let domain_collection = state
             .starknetid_db
-            .collection::<mongodb::bson::Document>("domains");
+            .collection::<mongodb::bson::Document>("renewals");
 
         let pipeline = vec![
             doc! {
@@ -46,7 +46,7 @@ pub async fn handler(
                         { "_cursor.to": { "$exists": false } },
                         { "_cursor.to": Bson::Null },
                     ],
-                    "creation_date": {
+                    "timestamp": {
                         "$gte": begin_time,
                         "$lte": end_time
                     }
@@ -60,12 +60,12 @@ pub async fn handler(
                                 {
                                     "$subtract": [
                                         {
-                                            "$subtract": ["$creation_date", begin_time]
+                                            "$subtract": ["$timestamp", begin_time]
                                         },
                                         {
                                             "$mod": [
                                                 {
-                                                    "$subtract": ["$creation_date", begin_time]
+                                                    "$subtract": ["$timestamp", begin_time]
                                                 },
                                                 delta_time
                                             ]
@@ -91,13 +91,13 @@ pub async fn handler(
         ];
 
         let cursor = domain_collection.aggregate(pipeline, None).await.unwrap();
-        let result: Vec<CountCreatedData> = cursor
+        let result: Vec<CountRenewedData> = cursor
             .map(|doc| {
                 let doc = doc.unwrap();
                 let from: i64 = doc.get_i64("from").unwrap();
                 let count = doc.get_i32("count").unwrap();
 
-                CountCreatedData { from, count }
+                CountRenewedData { from, count }
             })
             .collect::<Vec<_>>()
             .await;

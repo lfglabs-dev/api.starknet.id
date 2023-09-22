@@ -6,7 +6,10 @@ use axum::{
     Json,
 };
 use futures::StreamExt;
-use mongodb::{bson::doc, options::AggregateOptions};
+use mongodb::{
+    bson::{doc, Bson},
+    options::AggregateOptions,
+};
 use serde::Serialize;
 use std::sync::Arc;
 
@@ -28,7 +31,10 @@ pub async fn handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let pipeline = vec![
         doc! {
             "$match": {
-                "_cursor.to": null,
+                "$or": [
+                    { "_cursor.to": { "$exists": false } },
+                    { "_cursor.to": Bson::Null },
+                ],
                 "expiry": {
                     "$lte": current,
                 }
