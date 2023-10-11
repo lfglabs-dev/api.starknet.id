@@ -26,8 +26,12 @@ pub async fn handler(
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
 
-    let domains = state.starknetid_db.collection::<mongodb::bson::Document>("domains");
-    let starknet_ids = state.starknetid_db.collection::<mongodb::bson::Document>("id_owners");
+    let domains = state
+        .starknetid_db
+        .collection::<mongodb::bson::Document>("domains");
+    let starknet_ids = state
+        .starknetid_db
+        .collection::<mongodb::bson::Document>("id_owners");
 
     let hex_id = to_hex(&query.id);
 
@@ -79,6 +83,16 @@ pub async fn handler(
         return get_error("starknet id not found".to_string());
     }
 
+    let current_social_verifiers = state
+        .conf
+        .contracts
+        .verifiers
+        .clone()
+        .into_iter()
+        .map(|x| to_hex(&x))
+        .collect::<Vec<_>>();
+    let mut all_social_verifiers = current_social_verifiers.clone();
+    all_social_verifiers.extend(vec![to_hex(&state.conf.contracts.old_verifier)]);
     let owner = owner.unwrap();
     let pipeline = vec![
         doc! {
@@ -88,7 +102,7 @@ pub async fn handler(
                         "field": {
                             "$in": ["0x0000000000000000000000000000000000000000000000000000676974687562", "0x0000000000000000000000000000000000000000000000000074776974746572", "0x00000000000000000000000000000000000000000000000000646973636f7264"]
                         },
-                        "verifier": { "$in": [ to_hex(&state.conf.contracts.verifier), to_hex(&state.conf.contracts.old_verifier)] } // modified this to accommodate both verifiers
+                        "verifier": { "$in": all_social_verifiers } // modified this to accommodate both verifiers
                     },
                     {
                         "field": "0x0000000000000000000000000070726f6f665f6f665f706572736f6e686f6f64",
@@ -100,6 +114,11 @@ pub async fn handler(
             }
         },
         doc! {
+            "$sort": doc! {
+                "_cursor.from": 1
+            }
+        },
+        doc! {
             "$group": {
                 "_id": { "field": "$field", "verifier": "$verifier" }, // group by both field and verifier
                 "data": { "$first": "$data" }
@@ -107,7 +126,9 @@ pub async fn handler(
         },
     ];
 
-    let starknet_ids_data = state.starknetid_db.collection::<Document>("id_verifier_data");
+    let starknet_ids_data = state
+        .starknetid_db
+        .collection::<Document>("id_verifier_data");
     let results = starknet_ids_data.aggregate(pipeline, None).await;
 
     let mut github = None;
@@ -137,7 +158,7 @@ pub async fn handler(
                     (
                         "0x0000000000000000000000000000000000000000000000000000676974687562",
                         verifier,
-                    ) if verifier == to_hex(&state.conf.contracts.verifier) => {
+                    ) if current_social_verifiers.contains(&verifier.to_string()) => {
                         github = doc.get_str("data").ok().and_then(|data| {
                             FieldElement::from_hex_be(data)
                                 .map(|fe| fe.to_string())
@@ -158,7 +179,7 @@ pub async fn handler(
                     (
                         "0x0000000000000000000000000000000000000000000000000074776974746572",
                         verifier,
-                    ) if verifier == to_hex(&state.conf.contracts.verifier) => {
+                    ) if current_social_verifiers.contains(&verifier.to_string()) => {
                         twitter = doc.get_str("data").ok().and_then(|data| {
                             FieldElement::from_hex_be(data)
                                 .map(|fe| fe.to_string())
@@ -179,7 +200,7 @@ pub async fn handler(
                     (
                         "0x00000000000000000000000000000000000000000000000000646973636f7264",
                         verifier,
-                    ) if verifier == to_hex(&state.conf.contracts.verifier) => {
+                    ) if current_social_verifiers.contains(&verifier.to_string()) => {
                         discord = doc.get_str("data").ok().and_then(|data| {
                             FieldElement::from_hex_be(data)
                                 .map(|fe| fe.to_string())
