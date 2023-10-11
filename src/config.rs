@@ -28,7 +28,7 @@ pub_struct!(Clone, Deserialize; Database {
 pub_struct!(Clone, Deserialize; Contracts {
     starknetid: FieldElement,
     naming: FieldElement,
-    verifier: FieldElement,
+    verifiers: Vec<FieldElement>,
     old_verifier: FieldElement,
     pop_verifier: FieldElement,
 });
