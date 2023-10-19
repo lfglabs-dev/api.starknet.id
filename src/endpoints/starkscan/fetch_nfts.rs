@@ -16,7 +16,7 @@ use std::sync::Arc;
 #[derive(Deserialize)]
 pub struct FetchNftsQuery {
     addr: FieldElement,
-    next_url: Option<String>,
+    cursor: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -48,15 +48,14 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<FetchNftsQuery>,
 ) -> impl IntoResponse {
-    let url = if let Some(next_url) = &query.next_url {
-        next_url.clone()
-    } else {
-        format!(
-            "{}nfts?owner_address={}",
-            state.conf.starkscan.api_url,
-            to_hex(&query.addr)
-        )
-    };
+    let base_url = format!(
+        "{}nfts?owner_address={}",
+        state.conf.starkscan.api_url,
+        to_hex(&query.addr)
+    );
+    let url = query.cursor.as_ref().map_or(base_url.clone(), |cursor| {
+        format!("{}&cursor={}", base_url, cursor)
+    });
 
     let client = reqwest::Client::new();
     match client
@@ -68,7 +67,10 @@ pub async fn handler(
     {
         Ok(response) => match response.text().await {
             Ok(text) => match serde_json::from_str::<StarkscanApiResult>(&text) {
-                Ok(res) => (StatusCode::OK, Json(res)).into_response(),
+                Ok(res) => {
+                    println!("Got response: {:?}", res);
+                    (StatusCode::OK, Json(res)).into_response()
+                }
                 Err(e) => get_error(format!(
                     "Failed to deserialize result from Starkscan API: {} for response: {}",
                     e, text
