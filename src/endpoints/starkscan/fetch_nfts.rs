@@ -67,10 +67,7 @@ pub async fn handler(
     {
         Ok(response) => match response.text().await {
             Ok(text) => match serde_json::from_str::<StarkscanApiResult>(&text) {
-                Ok(res) => {
-                    println!("Got response: {:?}", res);
-                    (StatusCode::OK, Json(res)).into_response()
-                }
+                Ok(res) => (StatusCode::OK, Json(res)).into_response(),
                 Err(e) => get_error(format!(
                     "Failed to deserialize result from Starkscan API: {} for response: {}",
                     e, text
