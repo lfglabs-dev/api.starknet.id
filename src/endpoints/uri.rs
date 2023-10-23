@@ -8,7 +8,8 @@ use axum::{
     response::{IntoResponse, Json},
 };
 use chrono::NaiveDateTime;
-use mongodb::bson::doc;
+use futures::StreamExt;
+use mongodb::{bson::doc, options::AggregateOptions};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 use std::sync::Arc;
@@ -33,30 +34,78 @@ pub struct TokenIdQuery {
     id: FieldElement,
 }
 
+#[derive(Serialize, Debug)]
+pub struct VerifierData {
+    verifier: String,
+    field: String,
+}
+
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<TokenIdQuery>,
 ) -> impl IntoResponse {
-    let domains = state.starknetid_db.collection::<mongodb::bson::Document>("domains");
+    let domains = state
+        .starknetid_db
+        .collection::<mongodb::bson::Document>("domains");
 
-    let document = domains
-        .find_one(
-            doc! {
+    let aggregation_pipeline = vec![
+        doc! {
+            "$match": {
                 "id": to_hex(&query.id),
                 "_cursor.to": null,
-            },
-            None,
-        )
-        .await;
+            }
+        },
+        doc! {
+            "$lookup": {
+                "from": "id_verifier_data",
+                "let": { "token_id": "$id" },
+                "pipeline": [
+                    {
+                        "$match": {
+                            "$expr": {
+                                "$eq": ["$id", "$$token_id"]
+                            },
+                            "$or": [
+                                { "_cursor.to": null },
+                                { "_cursor.to": { "$exists": false } }
+                            ],
+                            "verifier" : "0x070378cc131622ed8099a1e47adcd0c76341c206dea05917a8dcb6896b0c6601",
+                            "field": "0x00000000000000000000000000000000006e66745f70705f636f6e7472616374",
+                        }
+                    }
+                ],
+                "as": "verifier_info"
+            }
+        },
+    ];
+
+    let options = AggregateOptions::default();
+    let mut cursor = domains
+        .aggregate(aggregation_pipeline, options)
+        .await
+        .unwrap();
 
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
 
-    match document {
-        Ok(doc) => {
-            if let Some(doc) = doc {
+    if let Some(result) = cursor.next().await {
+        match result {
+            Ok(doc) => {
                 let domain = doc.get_str("domain").unwrap_or_default().to_owned();
                 let expiry = doc.get_i64("expiry").unwrap_or_default();
+                let verifier_data: Option<VerifierData> = doc
+                    .get_array("verifier_info")
+                    .ok()
+                    .and_then(|array| array.get(0))
+                    .and_then(|first_entry| first_entry.as_document())
+                    .map(|vi| {
+                        let verifier = vi.get_str("verifier").unwrap_or_default().to_string();
+                        let field = vi.get_str("field").unwrap_or_default().to_string();
+                        VerifierData { verifier, field }
+                    });
+
+                println!("verifier_data: {:?}", verifier_data);
+
                 let token_uri = TokenURI {
                     name: domain.clone(),
                     description: "This token represents an identity on StarkNet.".to_string(),
@@ -80,17 +129,17 @@ pub async fn handler(
                     ]),
                 };
                 (StatusCode::OK, headers, Json(token_uri)).into_response()
-            } else {
-                let token_uri = TokenURI {
-                    name: format!("Starknet ID: {}", &query.id),
-                    description: "This token represents an identity on StarkNet.".to_string(),
-                    image: format!("https://starknet.id/api/identicons/{}", &query.id),
-                    expiry: None,
-                    attributes: None,
-                };
-                (StatusCode::OK, headers, Json(token_uri)).into_response()
             }
+            Err(_) => get_error("Error while fetching from database".to_string()),
         }
-        Err(_) => get_error("Error while fetching from database".to_string()),
+    } else {
+        let token_uri = TokenURI {
+            name: format!("Starknet ID: {}", &query.id),
+            description: "This token represents an identity on StarkNet.".to_string(),
+            image: format!("https://starknet.id/api/identicons/{}", &query.id),
+            expiry: None,
+            attributes: None,
+        };
+        (StatusCode::OK, headers, Json(token_uri)).into_response()
     }
 }
