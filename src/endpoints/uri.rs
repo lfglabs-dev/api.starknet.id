@@ -5,10 +5,11 @@ use axum::{
     response::{IntoResponse, Json},
 };
 use chrono::NaiveDateTime;
+use futures::StreamExt;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 #[derive(Serialize)]
 pub struct TokenURI {
@@ -61,20 +62,28 @@ pub async fn handler(
             { "_cursor.to": null },
             { "_cursor.to": { "$exists": false } }
         ],
-        "verifier" : "0x070378cc131622ed8099a1e47adcd0c76341c206dea05917a8dcb6896b0c6601",
-        "field": "0x00000000000000000000000000000000006e66745f70705f636f6e7472616374",
+        "verifier" : to_hex(&state.conf.contracts.pp_verifier),
+        "field": {
+            "$in": [
+                "0x00000000000000000000000000000000006e66745f70705f636f6e7472616374",
+                "0x00000000000000000000000000000000000000000000006e66745f70705f6964"
+            ]
+        }
     };
 
-    let verifier_data: Option<VerifierData> =
-        match id_verifier_data.find_one(verifier_filter, None).await {
-            Ok(Some(vi)) => {
-                let verifier = vi.get_str("verifier").unwrap_or_default().to_string();
-                let field = vi.get_str("field").unwrap_or_default().to_string();
-                Some(VerifierData { verifier, field })
+    let mut verifier_data_by_field: HashMap<String, VerifierData> = HashMap::new();
+    if let Ok(mut cursor) = id_verifier_data.find(verifier_filter, None).await {
+        while let Some(result) = cursor.next().await {
+            if let Ok(doc) = result {
+                let verifier = doc.get_str("verifier").unwrap_or_default().to_string();
+                let field = doc.get_str("field").unwrap_or_default().to_string();
+                verifier_data_by_field.insert(field.clone(), VerifierData { verifier, field });
             }
-            _ => None,
-        };
-    println!("verifier_data; {:?}", verifier_data);
+        }
+    }
+    for (field, verifier_data) in &verifier_data_by_field {
+        println!("Field {}: verifier_data: {:?}", field, verifier_data);
+    }
 
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
