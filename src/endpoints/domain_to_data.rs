@@ -1,7 +1,7 @@
 use crate::{
     models::{AppState, Data},
     resolving::get_custom_resolver,
-    utils::{get_error, to_hex},
+    utils::{fetch_img_url, get_error, to_hex, to_u256},
 };
 use axum::{
     extract::{Query, State},
@@ -12,12 +12,23 @@ use futures::StreamExt;
 use mongodb::bson::{doc, Document};
 use serde::Deserialize;
 use starknet::core::types::FieldElement;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 #[derive(Deserialize)]
 pub struct DomainQuery {
     domain: String,
 }
+
+#[derive(Debug)]
+pub struct VerifierData {
+    data: Option<String>,
+    extended_data: Option<Vec<String>>,
+}
+
+const NFT_PP_CONTRACT: &'static str =
+    "0x00000000000000000000000000000000006e66745f70705f636f6e7472616374";
+const NFT_PP_ID: &'static str =
+    "0x00000000000000000000000000000000000000000000006e66745f70705f6964";
 
 pub async fn handler(
     State(state): State<Arc<AppState>>,
@@ -99,7 +110,14 @@ pub async fn handler(
                     {
                         "field": "0x0000000000000000000000000070726f6f665f6f665f706572736f6e686f6f64",
                         "verifier": to_hex(&state.conf.contracts.pop_verifier)
-                    }
+                    },
+                    {
+                        "field": {
+                            // nft_pp_contract, nft_pp_id
+                            "$in": ["0x00000000000000000000000000000000006e66745f70705f636f6e7472616374", "0x00000000000000000000000000000000000000000000006e66745f70705f6964", "0x00000000000000000000000000000000000000000000000000646973636f7264"]
+                        },
+                        "verifier": to_hex(&state.conf.contracts.pp_verifier)
+                    },
                 ],
                 "id": &starknet_id,
                 "_cursor.to": null,
@@ -113,7 +131,8 @@ pub async fn handler(
         doc! {
             "$group": {
                 "_id": { "field": "$field", "verifier": "$verifier" }, // group by both field and verifier
-                "data": { "$first": "$data" }
+                "data": { "$first": "$data" },
+                "extended_data": { "$first": "$extended_data" }
             }
         },
     ];
@@ -123,103 +142,161 @@ pub async fn handler(
         .collection::<Document>("id_verifier_data");
     let results = starknet_ids_data.aggregate(pipeline, None).await;
 
-    let mut github = None;
-    let mut old_github = None; // added for old_verifier
-    let mut twitter = None;
-    let mut old_twitter = None; // added for old_verifier
-    let mut discord = None;
-    let mut old_discord = None; // added for old_verifier
-    let mut proof_of_personhood = None;
-
+    let mut verifier_data_by_field: HashMap<(String, String), VerifierData> = HashMap::new();
     if let Ok(mut cursor) = results {
         while let Some(result) = cursor.next().await {
             if let Ok(doc) = result {
-                let field = doc.get_document("_id").unwrap().get_str("field").unwrap();
-                let verifier = doc
-                    .get_document("_id")
-                    .unwrap()
-                    .get_str("verifier")
-                    .unwrap();
-
-                // it's a bit ugly but it will get better when we removed the old verifier
-                match (field, verifier) {
-                    (
-                        "0x0000000000000000000000000000000000000000000000000000676974687562",
-                        verifier,
-                    ) if current_social_verifiers.contains(&verifier.to_string()) => {
-                        github = doc.get_str("data").ok().and_then(|data| {
-                            FieldElement::from_hex_be(data)
-                                .map(|fe| fe.to_string())
+                match doc.get_document("_id") {
+                    Ok(inner_doc) => {
+                        if let (Ok(verifier), Ok(field)) =
+                            (inner_doc.get_str("verifier"), inner_doc.get_str("field"))
+                        {
+                            let data = doc.get_str("data").ok().map(String::from);
+                            let extended_data = doc
+                                .get_array("extended_data")
                                 .ok()
-                        })
+                                .map(|bson_array| {
+                                    bson_array
+                                        .iter()
+                                        .filter_map(|bson| bson.as_str().map(String::from))
+                                        .collect()
+                                })
+                                .filter(|v: &Vec<String>| !v.is_empty());
+                            verifier_data_by_field.insert(
+                                (verifier.to_string(), field.to_string()),
+                                VerifierData {
+                                    data,
+                                    extended_data,
+                                },
+                            );
+                        }
                     }
-                    (
-                        "0x0000000000000000000000000000000000000000000000000000676974687562",
-                        verifier,
-                    ) if verifier == to_hex(&state.conf.contracts.old_verifier) => {
-                        old_github = doc.get_str("data").ok().and_then(|data| {
-                            FieldElement::from_hex_be(data)
-                                .map(|fe| fe.to_string())
-                                .ok()
-                        })
-                    }
-
-                    (
-                        "0x0000000000000000000000000000000000000000000000000074776974746572",
-                        verifier,
-                    ) if current_social_verifiers.contains(&verifier.to_string()) => {
-                        twitter = doc.get_str("data").ok().and_then(|data| {
-                            FieldElement::from_hex_be(data)
-                                .map(|fe| fe.to_string())
-                                .ok()
-                        })
-                    }
-                    (
-                        "0x0000000000000000000000000000000000000000000000000074776974746572",
-                        verifier,
-                    ) if verifier == to_hex(&state.conf.contracts.old_verifier) => {
-                        old_twitter = doc.get_str("data").ok().and_then(|data| {
-                            FieldElement::from_hex_be(data)
-                                .map(|fe| fe.to_string())
-                                .ok()
-                        })
-                    }
-
-                    (
-                        "0x00000000000000000000000000000000000000000000000000646973636f7264",
-                        verifier,
-                    ) if current_social_verifiers.contains(&verifier.to_string()) => {
-                        discord = doc.get_str("data").ok().and_then(|data| {
-                            FieldElement::from_hex_be(data)
-                                .map(|fe| fe.to_string())
-                                .ok()
-                        })
-                    }
-                    (
-                        "0x00000000000000000000000000000000000000000000000000646973636f7264",
-                        verifier,
-                    ) if verifier == to_hex(&state.conf.contracts.old_verifier) => {
-                        old_discord = doc.get_str("data").ok().and_then(|data| {
-                            FieldElement::from_hex_be(data)
-                                .map(|fe| fe.to_string())
-                                .ok()
-                        })
-                    }
-
-                    ("0x0000000000000000000000000070726f6f665f6f665f706572736f6e686f6f64", _)
-                        if verifier == to_hex(&state.conf.contracts.pop_verifier) =>
-                    {
-                        // ensure pop is valid
-                        proof_of_personhood = doc.get_str("data").ok()
-                        .and_then(| data |
-                             Some(data == "0x0000000000000000000000000000000000000000000000000000000000000001"));
-                    }
-
-                    _ => {}
+                    Err(_) => {}
                 }
             }
         }
     }
+
+    let mut github = None;
+    for verifier in current_social_verifiers.to_owned() {
+        match verifier_data_by_field.get(&(
+            verifier,
+            "0x0000000000000000000000000000000000000000000000000000676974687562".to_string(),
+        )) {
+            Some(verifier_data) => {
+                github = verifier_data.data.to_owned().and_then(|data| {
+                    FieldElement::from_hex_be(&data)
+                        .map(|fe| fe.to_string())
+                        .ok()
+                });
+            }
+            None => {}
+        }
+    }
+
+    let old_github = match verifier_data_by_field.get(&(
+        to_hex(&state.conf.contracts.old_verifier),
+        "0x0000000000000000000000000000000000000000000000000000676974687562".to_string(),
+    )) {
+        Some(verifier_data) => verifier_data.data.to_owned().and_then(|data| {
+            FieldElement::from_hex_be(&data)
+                .map(|fe| fe.to_string())
+                .ok()
+        }),
+        None => None,
+    };
+
+    let mut twitter = None;
+    for verifier in current_social_verifiers.to_owned() {
+        match verifier_data_by_field.get(&(
+            verifier,
+            "0x0000000000000000000000000000000000000000000000000074776974746572".to_string(),
+        )) {
+            Some(verifier_data) => {
+                twitter = verifier_data.data.to_owned().and_then(|data| {
+                    FieldElement::from_hex_be(&data)
+                        .map(|fe| fe.to_string())
+                        .ok()
+                })
+            }
+            None => {}
+        }
+    }
+
+    let old_twitter = match verifier_data_by_field.get(&(
+        to_hex(&state.conf.contracts.old_verifier),
+        "0x0000000000000000000000000000000000000000000000000074776974746572".to_string(),
+    )) {
+        Some(verifier_data) => verifier_data.data.to_owned().and_then(|data| {
+            FieldElement::from_hex_be(&data)
+                .map(|fe| fe.to_string())
+                .ok()
+        }),
+        None => None,
+    };
+
+    let mut discord: Option<String> = None;
+    for verifier in current_social_verifiers.to_owned() {
+        match verifier_data_by_field.get(&(
+            verifier,
+            "0x00000000000000000000000000000000000000000000000000646973636f7264".to_string(),
+        )) {
+            Some(verifier_data) => {
+                discord = verifier_data.data.to_owned().and_then(|data| {
+                    FieldElement::from_hex_be(&data)
+                        .map(|fe| fe.to_string())
+                        .ok()
+                })
+            }
+            None => {}
+        }
+    }
+
+    let old_discord = match verifier_data_by_field.get(&(
+        to_hex(&state.conf.contracts.old_verifier),
+        "0x00000000000000000000000000000000000000000000000000646973636f7264".to_string(),
+    )) {
+        Some(verifier_data) => verifier_data.data.to_owned().and_then(|data| {
+            FieldElement::from_hex_be(&data)
+                .map(|fe| fe.to_string())
+                .ok()
+        }),
+        None => None,
+    };
+
+    let proof_of_personhood = match verifier_data_by_field.get(&(
+        to_hex(&state.conf.contracts.pop_verifier),
+        "0x0000000000000000000000000070726f6f665f6f665f706572736f6e686f6f64".to_string(),
+    )) {
+        Some(verifier_data) => verifier_data.data.to_owned().and_then(|data| {
+            Some(data == "0x0000000000000000000000000000000000000000000000000000000000000001")
+        }),
+        None => None,
+    };
+
+    let img_url = match (
+        verifier_data_by_field.get(&(
+            to_hex(&state.conf.contracts.pp_verifier),
+            NFT_PP_CONTRACT.to_string(),
+        )),
+        verifier_data_by_field.get(&(
+            to_hex(&state.conf.contracts.pp_verifier),
+            NFT_PP_ID.to_string(),
+        )),
+    ) {
+        (Option::Some(data_contract), Option::Some(data_id)) => {
+            let id_felts = data_id.to_owned().extended_data.as_ref().unwrap();
+            let id = to_u256(id_felts.get(0).unwrap(), id_felts.get(1).unwrap());
+            fetch_img_url(
+                &state.conf.starkscan.api_url,
+                &state.conf.starkscan.api_key,
+                data_contract.data.to_owned().unwrap(),
+                id.to_string(),
+            )
+            .await
+        }
+        _ => None,
+    };
 
     let is_owner_main_document = domains
         .find_one(
@@ -248,6 +325,7 @@ pub async fn handler(
         old_discord, // added this field
         proof_of_personhood,
         starknet_id: FieldElement::from_hex_be(&starknet_id).unwrap().to_string(),
+        img_url,
     };
 
     (StatusCode::OK, headers, Json(data)).into_response()
