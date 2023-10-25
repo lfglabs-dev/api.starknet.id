@@ -1,4 +1,7 @@
-use crate::{models::AppState, utils::to_hex};
+use crate::{
+    models::AppState,
+    utils::{fetch_img_url, to_hex, to_u256},
+};
 use axum::{
     extract::{Query, State},
     http::{HeaderMap, HeaderValue, StatusCode},
@@ -35,7 +38,14 @@ pub struct TokenIdQuery {
 pub struct VerifierData {
     verifier: String,
     field: String,
+    data: Option<String>,
+    extended_data: Option<Vec<String>>,
 }
+
+const NFT_PP_CONTRACT: &'static str =
+    "0x00000000000000000000000000000000006e66745f70705f636f6e7472616374";
+const NFT_PP_ID: &'static str =
+    "0x00000000000000000000000000000000000000000000006e66745f70705f6964";
 
 pub async fn handler(
     State(state): State<Arc<AppState>>,
@@ -65,25 +75,60 @@ pub async fn handler(
         "verifier" : to_hex(&state.conf.contracts.pp_verifier),
         "field": {
             "$in": [
-                "0x00000000000000000000000000000000006e66745f70705f636f6e7472616374",
-                "0x00000000000000000000000000000000000000000000006e66745f70705f6964"
+                NFT_PP_CONTRACT,
+                NFT_PP_ID
             ]
         }
     };
-
     let mut verifier_data_by_field: HashMap<String, VerifierData> = HashMap::new();
     if let Ok(mut cursor) = id_verifier_data.find(verifier_filter, None).await {
         while let Some(result) = cursor.next().await {
             if let Ok(doc) = result {
-                let verifier = doc.get_str("verifier").unwrap_or_default().to_string();
-                let field = doc.get_str("field").unwrap_or_default().to_string();
-                verifier_data_by_field.insert(field.clone(), VerifierData { verifier, field });
+                if let (Ok(verifier), Ok(field)) = (doc.get_str("verifier"), doc.get_str("field")) {
+                    let data = doc.get_str("data").ok().map(String::from);
+
+                    let extended_data = doc
+                        .get_array("extended_data")
+                        .ok()
+                        .map(|bson_array| {
+                            bson_array
+                                .iter()
+                                .filter_map(|bson| bson.as_str().map(String::from))
+                                .collect()
+                        })
+                        .filter(|v: &Vec<String>| !v.is_empty());
+
+                    verifier_data_by_field.insert(
+                        field.to_string(),
+                        VerifierData {
+                            verifier: verifier.to_string(),
+                            field: field.to_string(),
+                            data,
+                            extended_data,
+                        },
+                    );
+                }
             }
         }
     }
-    for (field, verifier_data) in &verifier_data_by_field {
-        println!("Field {}: verifier_data: {:?}", field, verifier_data);
-    }
+
+    let img_url = match (
+        verifier_data_by_field.get(NFT_PP_CONTRACT),
+        verifier_data_by_field.get(NFT_PP_ID),
+    ) {
+        (Option::Some(data_contract), Option::Some(data_id)) => {
+            let id_felts = data_id.to_owned().extended_data.as_ref().unwrap();
+            let id = to_u256(id_felts.get(0).unwrap(), id_felts.get(1).unwrap());
+            fetch_img_url(
+                &state.conf.starkscan.api_url,
+                &state.conf.starkscan.api_key,
+                data_contract.data.to_owned().unwrap(),
+                id.to_string(),
+            )
+            .await
+        }
+        _ => None,
+    };
 
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
@@ -96,7 +141,10 @@ pub async fn handler(
             let token_uri = TokenURI {
                 name: domain.clone(),
                 description: "This token represents an identity on StarkNet.".to_string(),
-                image: format!("https://starknet.id/api/identicons/{}", &query.id),
+                image: match img_url {
+                    Some(url) => url,
+                    None => format!("https://starknet.id/api/identicons/{}", &query.id),
+                },
                 expiry: Some(expiry),
                 attributes: Some(vec![
                     Attribute {

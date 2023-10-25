@@ -49,7 +49,7 @@ pub async fn handler(
     Query(query): Query<FetchNftsQuery>,
 ) -> impl IntoResponse {
     let base_url = format!(
-        "{}nfts?owner_address={}",
+        "{}/nfts?owner_address={}",
         state.conf.starkscan.api_url,
         to_hex(&query.addr)
     );
