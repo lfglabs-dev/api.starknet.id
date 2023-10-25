@@ -1,6 +1,6 @@
 use crate::{
     models::AppState,
-    utils::{get_error, to_hex},
+    utils::{fetch_img_url, get_error, to_hex, to_u256},
 };
 use axum::{
     extract::{Query, State},
@@ -8,6 +8,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use futures::future::join_all;
 use futures::stream::StreamExt;
 use mongodb::{
     bson::{doc, Bson},
@@ -25,7 +26,14 @@ pub struct FullId {
     #[serde(skip_serializing_if = "Option::is_none")]
     domain_expiry: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    nft_pp: Option<NFTPP>,
+    pp_url: Option<String>,
+}
+
+pub struct TempsFullId {
+    id: String,
+    domain: Option<String>,
+    domain_expiry: Option<i32>,
+    pp_url_info: Option<(String, String)>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -54,8 +62,8 @@ pub async fn handler(
 
     let pipeline = [
         doc! {
-            "$addFields": doc! {
-                "id": to_hex(&query.addr),
+            "$match": doc! {
+                "owner": to_hex(&query.addr),
                 "_cursor.to": Bson::Null
             }
         },
@@ -107,7 +115,7 @@ pub async fn handler(
                                     // nft_pp_contract
                                     "0x00000000000000000000000000000000006e66745f70705f636f6e7472616374",
                                     // nft_pp_id
-                                    "0x0000000000000000000000000000000000000000000000000074776974746572"
+                                    "0x00000000000000000000000000000000000000000000006e66745f70705f6964"
                                 ]
                             },
                             "verifier": to_hex(&state.conf.contracts.pp_verifier),
@@ -118,7 +126,8 @@ pub async fn handler(
                         "$project": doc! {
                             "_id": 0,
                             "field": 1,
-                            "data": 1
+                            "data": 1,
+                            "extended_data": 1
                         }
                     }
                 ],
@@ -141,7 +150,7 @@ pub async fn handler(
 
     match cursor {
         Ok(mut cursor) => {
-            let mut full_ids = Vec::new();
+            let mut temp_full_ids = Vec::new();
             while let Some(doc) = cursor.next().await {
                 if let Ok(doc) = doc {
                     let id = FieldElement::from_hex_be(
@@ -152,7 +161,7 @@ pub async fn handler(
                     let domain = doc.get_str("domain").ok().map(String::from);
                     let domain_expiry = doc.get_i32("domain_expiry").ok();
                     let pp_verifier_data = doc.get_array("pp_verifier_data").ok();
-                    let mut nft_pp = None;
+                    let mut pp_url_info = None;
                     if let Some(data) = pp_verifier_data {
                         if data.len() >= 2 {
                             if let (Some(contract_data), Some(id_data)) = (data.get(0), data.get(1))
@@ -160,27 +169,71 @@ pub async fn handler(
                                 if let (Bson::Document(contract_doc), Bson::Document(id_doc)) =
                                     (contract_data, id_data)
                                 {
-                                    if let (Ok(contract_str), Ok(id_str)) =
-                                        (contract_doc.get_str("data"), id_doc.get_str("data"))
-                                    {
-                                        nft_pp = Some(NFTPP {
-                                            contract: contract_str.to_string(),
-                                            id: id_str.to_string(),
-                                        });
+                                    if let (Ok(contract_str), Ok(data_id)) = (
+                                        contract_doc.get_str("data"),
+                                        id_doc.get_array("extended_data"),
+                                    ) {
+                                        let id_felts: Vec<String> = data_id
+                                            .into_iter()
+                                            .map(|b| match b {
+                                                Bson::String(s) => s.to_owned(),
+                                                _ => b.to_string(),
+                                            })
+                                            .collect();
+                                        let id = to_u256(
+                                            id_felts.get(0).unwrap(),
+                                            id_felts.get(1).unwrap(),
+                                        )
+                                        .to_string();
+                                        pp_url_info =
+                                            Some((contract_str.to_string(), id.to_string()));
                                     }
                                 }
                             }
                         }
                     }
-                    full_ids.push(FullId {
+                    temp_full_ids.push(TempsFullId {
                         id,
                         domain,
                         domain_expiry,
-                        nft_pp,
+                        pp_url_info,
                     });
                 }
             }
-            let response = FullIdResponse { full_ids };
+            let api_url = state.conf.starkscan.api_url.clone();
+            let api_key = state.conf.starkscan.api_key.clone();
+            let full_ids_futures: Vec<_> = temp_full_ids
+                .iter()
+                .map(|id| {
+                    let api_url_clone = api_url.clone();
+                    let api_key_clone = api_key.clone();
+                    async move {
+                        let pp_url = match &id.pp_url_info {
+                            Some((contract, id)) => {
+                                fetch_img_url(
+                                    &api_url_clone,
+                                    &api_key_clone,
+                                    contract.to_owned(),
+                                    id.to_owned(),
+                                )
+                                .await
+                            }
+                            None => None,
+                        };
+
+                        FullId {
+                            id: id.id.clone(),
+                            domain: id.domain.clone(),
+                            domain_expiry: id.domain_expiry,
+                            pp_url: pp_url,
+                        }
+                    }
+                })
+                .collect();
+
+            let full_ids: Vec<_> = join_all(full_ids_futures).await;
+
+            let response = FullIdResponse { full_ids: full_ids };
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(_) => get_error("Error while fetching from database".to_string()),
