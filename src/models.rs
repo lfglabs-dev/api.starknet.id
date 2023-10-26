@@ -34,4 +34,5 @@ pub struct Data {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub proof_of_personhood: Option<bool>,
     pub starknet_id: String,
+    pub img_url: Option<String>
 }

@@ -15,9 +15,10 @@ naming = "0xXXXXXXXXXXXX"
 verifier = "0xXXXXXXXXXXXX"
 old_verifier = "0xXXXXXXXXXXXX"
 pop_verifier = "0xXXXXXXXXXXXX"
+pp_verifier = "0xXXXXXXXXXXXX"
 
 [starkscan]
-api_url = "https://api-testnet.starkscan.co/api/v0/"
+api_url = "https://api-testnet.starkscan.co/api/v0"
 api_key = "xxxxxx"
 
 [custom_resolvers]

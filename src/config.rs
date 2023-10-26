@@ -31,6 +31,7 @@ pub_struct!(Clone, Deserialize; Contracts {
     verifiers: Vec<FieldElement>,
     old_verifier: FieldElement,
     pop_verifier: FieldElement,
+    pp_verifier: FieldElement,
 });
 
 pub_struct!(Clone, Deserialize; Starkscan {
