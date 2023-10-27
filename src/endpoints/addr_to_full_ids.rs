@@ -24,7 +24,7 @@ pub struct FullId {
     #[serde(skip_serializing_if = "Option::is_none")]
     domain: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    domain_expiry: Option<i32>,
+    domain_expiry: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pp_url: Option<String>,
 }
@@ -32,7 +32,7 @@ pub struct FullId {
 pub struct TempsFullId {
     id: String,
     domain: Option<String>,
-    domain_expiry: Option<i32>,
+    domain_expiry: Option<i64>,
     pp_url_info: Option<(String, String)>,
 }
 
@@ -159,7 +159,7 @@ pub async fn handler(
                     .unwrap()
                     .to_string();
                     let domain = doc.get_str("domain").ok().map(String::from);
-                    let domain_expiry = doc.get_i32("domain_expiry").ok();
+                    let domain_expiry = doc.get_i64("domain_expiry").ok();
                     let pp_verifier_data = doc.get_array("pp_verifier_data").ok();
                     let mut pp_url_info = None;
                     if let Some(data) = pp_verifier_data {
