@@ -163,33 +163,36 @@ pub async fn handler(
                     let pp_verifier_data = doc.get_array("pp_verifier_data").ok();
                     let mut pp_url_info = None;
                     if let Some(data) = pp_verifier_data {
-                        if data.len() >= 2 {
-                            if let (Some(contract_data), Some(id_data)) = (data.get(0), data.get(1))
-                            {
-                                if let (Bson::Document(contract_doc), Bson::Document(id_doc)) =
-                                    (contract_data, id_data)
-                                {
-                                    if let (Ok(contract_str), Ok(data_id)) = (
-                                        contract_doc.get_str("data"),
-                                        id_doc.get_array("extended_data"),
-                                    ) {
-                                        let id_felts: Vec<String> = data_id
-                                            .into_iter()
-                                            .map(|b| match b {
-                                                Bson::String(s) => s.to_owned(),
-                                                _ => b.to_string(),
-                                            })
-                                            .collect();
-                                        let id = to_u256(
-                                            id_felts.get(0).unwrap(),
-                                            id_felts.get(1).unwrap(),
-                                        )
-                                        .to_string();
-                                        pp_url_info =
-                                            Some((contract_str.to_string(), id.to_string()));
-                                    }
+                        let mut contract_str_opt: Option<String> = None;
+                        let mut data_id_opt: Option<&Vec<Bson>> = None;
+
+                        for item in data.iter() {
+                            if let Bson::Document(doc_item) = item {
+                                if let Ok(field_str) = doc_item.get_str("field") {
+                                    if field_str == "0x00000000000000000000000000000000006e66745f70705f636f6e7472616374" {
+                                contract_str_opt = doc_item.get_str("data").ok().map(String::from);
+                            } else if field_str == "0x00000000000000000000000000000000000000000000006e66745f70705f6964" {
+                                data_id_opt = doc_item.get_array("extended_data").ok();
+                            }
                                 }
                             }
+                        }
+
+                        if contract_str_opt.is_some() && data_id_opt.is_some() {
+                            let contract_str = contract_str_opt.unwrap();
+                            let data_id: Vec<String> = data_id_opt
+                                .unwrap()
+                                .into_iter()
+                                .map(|b| match b {
+                                    Bson::String(s) => s.to_owned(),
+                                    _ => b.to_string(),
+                                })
+                                .collect();
+
+                            let id = to_u256(data_id.get(0).unwrap(), data_id.get(1).unwrap())
+                                .to_string();
+
+                            pp_url_info = Some((contract_str, id));
                         }
                     }
                     temp_full_ids.push(TempsFullId {
