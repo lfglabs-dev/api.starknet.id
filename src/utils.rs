@@ -17,6 +17,34 @@ pub fn get_error(error: String) -> Response {
     (StatusCode::BAD_REQUEST, error).into_response()
 }
 
+pub fn extract_prefix_and_root(domain: String) -> (String, String) {
+    let parts: Vec<&str> = domain.split('.').rev().collect();
+
+    let root = parts
+        .iter()
+        .take(2)
+        .rev()
+        .cloned()
+        .collect::<Vec<&str>>()
+        .join(".");
+    let prefix = if parts.len() > 2 {
+        format!(
+            "{}.",
+            parts
+                .iter()
+                .skip(2)
+                .rev()
+                .cloned()
+                .collect::<Vec<&str>>()
+                .join("."),
+        )
+    } else {
+        String::new()
+    };
+
+    (prefix, root)
+}
+
 pub fn to_hex(felt: &FieldElement) -> String {
     let bytes = felt.to_bytes_be();
     let mut result = String::with_capacity(bytes.len() * 2 + 2);
