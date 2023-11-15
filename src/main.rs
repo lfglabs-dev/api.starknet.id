@@ -4,6 +4,7 @@ mod config;
 mod endpoints;
 mod models;
 mod resolving;
+mod tax;
 mod utils;
 use axum::{
     http::StatusCode,
@@ -30,6 +31,12 @@ async fn main() {
         .await
         .unwrap();
 
+    let states = tax::sales_tax::load_sales_tax().await;
+    if states.states.is_empty() {
+        println!("error: unable to load sales tax");
+        return;
+    }
+
     let shared_state = Arc::new(models::AppState {
         conf: conf.clone(),
         starknetid_db: Client::with_options(starknetid_client_options)
@@ -38,6 +45,7 @@ async fn main() {
         sales_db: Client::with_options(sales_client_options)
             .unwrap()
             .database(&conf.databases.sales.name),
+        states,
     });
     // we will know by looking at the log number which db has an issue
     for db in [&shared_state.starknetid_db, &shared_state.sales_db] {
