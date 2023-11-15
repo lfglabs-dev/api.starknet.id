@@ -6,7 +6,7 @@ port = 8080
 name = "starknetid"
 connection_string = "xxxxxx"
 [databases.sales]
-name = "sales"
+name = "goerli"
 connection_string = "xxxxxx"
 
 [contracts]
