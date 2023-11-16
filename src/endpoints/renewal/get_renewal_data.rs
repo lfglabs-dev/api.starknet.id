@@ -8,7 +8,7 @@ use axum::{
     response::{IntoResponse, Json},
 };
 use futures::StreamExt;
-use mongodb::bson::doc;
+use mongodb::{bson::doc, options::FindOptions};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 use std::sync::Arc;
@@ -32,6 +32,11 @@ pub async fn handler(
         .starknetid_db
         .collection::<mongodb::bson::Document>("auto_renew_flows");
 
+    let find_options = FindOptions::builder()
+        .sort(doc! {"_cursor.from": -1})
+        .limit(1)
+        .build();
+
     let documents = renew_collection
         .find(
             doc! {
@@ -42,7 +47,7 @@ pub async fn handler(
                     { "_cursor.to": null },
                 ],
             },
-            None,
+            find_options,
         )
         .await;
 
