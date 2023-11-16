@@ -71,7 +71,6 @@ pub async fn handler(
                 let mut headers = HeaderMap::new();
                 headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
 
-                println!("docs: {:?}", documents);
                 for doc in documents {
                     if let Ok(meta_hash) = doc.get_str("meta_hash") {
                         let mut tax_rate = 0.0;
