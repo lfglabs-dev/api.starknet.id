@@ -1,5 +1,9 @@
 {
     "states": {
+        "switzerland" : {
+            "rate" : 0.077,
+            "type" : "vat"
+        },
         "AL": {
         "rate": 4,
         "type": "vat"
