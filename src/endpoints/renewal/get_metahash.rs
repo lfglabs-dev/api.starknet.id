@@ -49,7 +49,6 @@ pub async fn handler(
         }},
         doc! {"$unwind": {
             "path": "$metadata_info",
-            "preserveNullAndEmptyArrays": true
         }},
         doc! {"$project": {
             "meta_hash": 1,
