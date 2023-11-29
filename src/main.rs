@@ -142,6 +142,10 @@ async fn main() {
             "/renewal/get_metahash",
             get(endpoints::renewal::get_metahash::handler),
         )
+        .route(
+            "/renewal/get_non_subscribed_domains",
+            get(endpoints::renewal::get_non_subscribed_domains::handler),
+        )
         .route("/galxe/verify", post(endpoints::galxe::verify::handler))
         .with_state(shared_state)
         .layer(cors);
