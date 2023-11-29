@@ -22,23 +22,61 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<StarknetIdQuery>,
 ) -> impl IntoResponse {
-    let domains = state
+    let id_owners = state
         .starknetid_db
-        .collection::<mongodb::bson::Document>("domains");
+        .collection::<mongodb::bson::Document>("id_owners");
     let addr = to_hex(&query.addr);
 
     let pipeline = vec![
         doc! {
-            "$match": {
-                "legacy_address": &addr,
-                "_cursor.to": null,
-            },
+            "$match": doc! {
+                "owner": to_hex(&query.addr),
+                "_cursor.to": null
+            }
+        },
+        doc! {
+            "$lookup": doc! {
+                "from": "domains",
+                "let": doc! {
+                    "local_id": "$id"
+                },
+                "pipeline": [
+                    doc! {
+                        "$match": doc! {
+                            "$expr": doc! {
+                                "$eq": [
+                                    "$id",
+                                    "$$local_id"
+                                ]
+                            },
+                            "_cursor.to": null
+                        }
+                    }
+                ],
+                "as": "domainData"
+            }
+        },
+        doc! {
+            "$unwind": doc! {
+                "path": "$domainData",
+                "preserveNullAndEmptyArrays": true
+            }
         },
         doc! {
             "$lookup": {
                 "from": "auto_renew_flows",
-                "localField": "domain",
-                "foreignField": "domain",
+                "let": doc! {
+                    "domain_name": "$domainData.domain"
+                },
+                "pipeline": [
+                    doc! {
+                        "$match": doc! {
+                            "$expr": doc! {
+                                "$eq": ["$domain", "$$domain_name"]
+                            }
+                        }
+                    }
+                ],
                 "as": "renew_flows"
             }
         },
@@ -60,8 +98,10 @@ pub async fn handler(
             }
         },
         doc! {
-            "$project": {
-                "domain": 1,
+            "$project": doc! {
+                "_id": 0,
+                "id": 1,
+                "domain": "$domainData.domain",
                 "enabled": {
                     "$cond": {
                         "if": { "$eq": ["$renew_flows", null] },
@@ -73,7 +113,7 @@ pub async fn handler(
         },
     ];
 
-    let cursor = domains
+    let cursor = id_owners
         .aggregate(pipeline, AggregateOptions::default())
         .await;
     match cursor {
@@ -81,10 +121,11 @@ pub async fn handler(
             let mut results: Vec<String> = Vec::new();
             while let Some(doc) = cursor.next().await {
                 if let Ok(doc) = doc {
-                    let enabled = doc.get_bool("enabled").unwrap_or_default();
+                    let enabled = doc.get_bool("enabled").unwrap_or(false);
                     if !enabled {
-                        let domain = doc.get_str("domain").map(|s| s.to_string()).ok().unwrap();
-                        results.push(domain);
+                        if let Ok(domain) = doc.get_str("domain") {
+                            results.push(domain.to_string());
+                        }
                     }
                 }
             }
