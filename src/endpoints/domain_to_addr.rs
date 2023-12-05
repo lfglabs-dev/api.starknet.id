@@ -64,6 +64,7 @@ pub async fn handler(
             let domains = state
                 .starknetid_db
                 .collection::<mongodb::bson::Document>("domains");
+            // also return the data written on starknetid
             let document = domains
                 .find_one(
                     doc! {
@@ -73,7 +74,8 @@ pub async fn handler(
                     None,
                 )
                 .await;
-
+            
+            // if not legacy_address, read the starknetid field
             match document {
                 Ok(doc) => {
                     if let Some(doc) = doc {

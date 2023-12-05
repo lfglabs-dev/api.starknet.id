@@ -30,6 +30,7 @@ pub async fn handler(
 ) -> impl IntoResponse {
     let domains = state.starknetid_db.collection::<mongodb::bson::Document>("domains");
     let hex_addr = to_hex(&query.addr);
+    // todo: if not found or 0, check main id
     let document = domains
         .find_one(
             doc! {
