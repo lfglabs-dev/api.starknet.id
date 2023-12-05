@@ -23,3 +23,6 @@ api_key = "xxxxxx"
 
 [custom_resolvers]
 "0xXXXXXXXXXXXX" = ["domain.stark"]
+
+[solana]
+rpc_url = "https://rpc-public.hellomoon.io/"

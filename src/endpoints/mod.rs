@@ -13,4 +13,5 @@ pub mod referral;
 pub mod renewal;
 pub mod starkscan;
 pub mod stats;
+pub mod subdomains;
 pub mod uri;

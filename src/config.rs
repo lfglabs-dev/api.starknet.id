@@ -39,6 +39,10 @@ pub_struct!(Clone, Deserialize; Starkscan {
     api_key: String,
 });
 
+pub_struct!(Clone, Deserialize; Solana {
+    rpc_url: String,
+});
+
 #[derive(Deserialize)]
 struct RawConfig {
     server: Server,
@@ -46,6 +50,7 @@ struct RawConfig {
     contracts: Contracts,
     starkscan: Starkscan,
     custom_resolvers: HashMap<String, Vec<String>>,
+    solana: Solana,
 }
 
 pub_struct!(Clone, Deserialize; Config {

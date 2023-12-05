@@ -147,6 +147,10 @@ async fn main() {
             get(endpoints::renewal::get_non_subscribed_domains::handler),
         )
         .route("/galxe/verify", post(endpoints::galxe::verify::handler))
+        .route(
+            "/subdomains/generate_sol_sig",
+            post(endpoints::subdomains::generate_sol_sig::handler),
+        )
         .with_state(shared_state)
         .layer(cors);
 
