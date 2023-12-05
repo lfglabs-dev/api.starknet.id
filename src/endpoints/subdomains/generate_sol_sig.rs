@@ -19,37 +19,6 @@ pub struct SigQuery {
     max_validity: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SNSResponse {
-    owner_key: String,
-}
-#[derive(Serialize)]
-struct JsonRequest {
-    jsonrpc: String,
-    method: String,
-    params: JsonParams,
-    id: i32,
-}
-
-#[derive(Serialize)]
-struct JsonParams {
-    domain: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct JsonResponse {
-    jsonrpc: String,
-    result: Option<String>,
-    id: i32,
-    error: Option<JsonError>,
-}
-
-#[derive(Deserialize, Debug)]
-struct JsonError {
-    code: i32,
-    message: String,
-}
-
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Json(query): Json<SigQuery>,
@@ -63,6 +32,7 @@ pub async fn handler(
     println!("query: {:?}", query);
     let client = RpcClient::new(state.conf.solana.rpc_url);
     let res = resolve_owner(&client, "riton").await.unwrap();
+    println!("res: {:?}", res);
 
     return (StatusCode::OK, Json("test")).into_response();
 }
