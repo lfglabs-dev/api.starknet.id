@@ -25,4 +25,5 @@ api_key = "xxxxxx"
 "0xXXXXXXXXXXXX" = ["domain.stark"]
 
 [solana]
-rpc_url = "https://rpc-public.hellomoon.io/"
+rpc_url = "https://xxxxxxx.solana-mainnet.quiknode.pro/xxxxxxx"
+private_key = "xxxxxxx"
