@@ -7,7 +7,8 @@ use axum::{
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Json},
 };
-use mongodb::bson::doc;
+use futures::StreamExt;
+use mongodb::{bson::doc, options::AggregateOptions};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -64,33 +65,62 @@ pub async fn handler(
             let domains = state
                 .starknetid_db
                 .collection::<mongodb::bson::Document>("domains");
-            // also return the data written on starknetid
-            let document = domains
-                .find_one(
-                    doc! {
-                        "domain": &query.domain,
-                        "_cursor.to": null,
+
+            let pipeline = vec![
+                doc! { "$match": { "_cursor.to": null, "domain": query.domain.clone() } },
+                doc! { "$lookup": {
+                    "from": "id_user_data",
+                    "let": { "userId": "$id" },
+                    "pipeline": [
+                        doc! { "$match": {
+                            "_cursor.to": { "$exists": false },
+                            "field": "0x000000000000000000000000000000000000000000000000737461726b6e6574",
+                            "$expr": { "$eq": ["$id", "$$userId"] }
+                        } }
+                    ],
+                    "as": "ownerData"
+                }},
+                doc! { "$unwind": { "path": "$ownerData", "preserveNullAndEmptyArrays": true } },
+                doc! { "$project": {
+                    "addr": {
+                        "$cond": {
+                            "if": { "$and": [
+                                { "$ne": [{ "$type": "$legacy_address" }, "missing"] },
+                                { "$ne": ["$legacy_address", "0x00"] }
+                            ] },
+                            "then": "$legacy_address",
+                            "else": "$ownerData.data"
+                        }
                     },
-                    None,
-                )
-                .await;
-            
-            // if not legacy_address, read the starknetid field
-            match document {
-                Ok(doc) => {
-                    if let Some(doc) = doc {
-                        let addr = doc.get_str("legacy_address").unwrap_or_default().to_owned();
-                        let domain_expiry = doc.get_i64("expiry").ok();
-                        let data = DomainToAddrData {
-                            addr,
-                            domain_expiry,
+                    "domain_expiry" : "$expiry"
+                }},
+            ];
+
+            // Execute the aggregation pipeline
+            let cursor: Result<mongodb::Cursor<mongodb::bson::Document>, &str> = domains
+                .aggregate(pipeline, AggregateOptions::default())
+                .await
+                .map_err(|_| "Error while executing aggregation pipeline");
+
+            match cursor {
+                Ok(mut cursor) => {
+                    while let Some(result) = cursor.next().await {
+                        return match result {
+                            Ok(doc) => {
+                                let addr = doc.get_str("addr").unwrap_or_default().to_owned();
+                                let domain_expiry = doc.get_i64("domain_expiry").ok();
+                                let data = DomainToAddrData {
+                                    addr,
+                                    domain_expiry,
+                                };
+                                (StatusCode::OK, Json(data)).into_response()
+                            }
+                            Err(e) => get_error(format!("Error calling the db: {}", e)),
                         };
-                        (StatusCode::OK, headers, Json(data)).into_response()
-                    } else {
-                        get_error("no address found".to_string())
                     }
+                    return get_error("No document found for the given domain".to_string());
                 }
-                Err(_) => get_error("Error while fetching from database".to_string()),
+                Err(e) => return get_error(format!("Error accessing the database: {}", e)),
             }
         }
     }
