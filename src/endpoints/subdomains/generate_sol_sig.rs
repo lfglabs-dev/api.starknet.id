@@ -46,7 +46,8 @@ struct JsonParams {
     domain: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
+#[allow(unused)]
 struct JsonResponse {
     jsonrpc: String,
     result: Option<String>,
@@ -54,7 +55,8 @@ struct JsonResponse {
     error: Option<JsonError>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
+#[allow(unused)]
 struct JsonError {
     code: i32,
     message: String,
@@ -103,7 +105,6 @@ pub async fn handler(
             match response.json::<JsonResponse>().await {
                 Ok(parsed) => {
                     let owner_pubkey = parsed.result.unwrap();
-                    println!("owner_pubKey: {:?}", owner_pubkey);
 
                     // recreate the message hash
                     let message = format!(
@@ -113,7 +114,6 @@ pub async fn handler(
                         to_hex(&target_address),
                         max_validity
                     );
-                    println!("message: {:?}", message);
 
                     // verify Solana signature
                     match verify_signature(&owner_pubkey, &message, &source_signature_array) {
