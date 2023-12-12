@@ -2,6 +2,7 @@ use crate::{
     models::AppState,
     utils::{get_error, to_hex},
 };
+use anyhow::{bail, Result};
 use axum::{
     extract::{Query, State},
     http::StatusCode,
@@ -9,7 +10,11 @@ use axum::{
     Json,
 };
 use futures::StreamExt;
-use mongodb::{bson::doc, options::AggregateOptions};
+use mongodb::{
+    bson::{doc, Document},
+    options::AggregateOptions,
+    Cursor,
+};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 use std::sync::Arc;
@@ -25,17 +30,72 @@ pub struct AddrToDomainQuery {
     addr: FieldElement,
 }
 
+async fn read_cursor(mut cursor: Cursor<Document>) -> Result<AddrToDomainData> {
+    while let Some(result) = cursor.next().await {
+        let doc = result?;
+        let domain = doc.get_str("domain").unwrap_or_default().to_owned();
+        let domain_expiry = doc.get_i64("domain_expiry").ok();
+        return Ok(AddrToDomainData {
+            domain,
+            domain_expiry,
+        });
+    }
+    bail!("No document found for the given address")
+}
+
+async fn aggregate_data(
+    collection: mongodb::Collection<Document>,
+    pipeline: Vec<Document>,
+) -> Result<AddrToDomainData> {
+    let cursor = collection
+        .aggregate(pipeline, AggregateOptions::default())
+        .await?;
+    read_cursor(cursor).await
+}
+
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<AddrToDomainQuery>,
 ) -> impl IntoResponse {
     let hex_addr = to_hex(&query.addr);
+    let domains_collection = state.starknetid_db.collection::<Document>("domains");
+    let id_owners_collection = state.starknetid_db.collection::<Document>("id_owners");
 
-    let domains = state
-        .starknetid_db
-        .collection::<mongodb::bson::Document>("domains");
-    let legacy_pipeline = vec![
-        doc! { "$match": { "_cursor.to": null, "rev_address": &hex_addr } },
+    let legacy_pipeline = create_legacy_pipeline(&hex_addr);
+    let normal_pipeline = create_normal_pipeline(&hex_addr);
+    let main_id_pipeline = create_main_id_pipeline(&hex_addr);
+
+    let results = [
+        aggregate_data(domains_collection.clone(), legacy_pipeline),
+        aggregate_data(domains_collection.clone(), normal_pipeline),
+        aggregate_data(id_owners_collection, main_id_pipeline),
+    ];
+
+    for result in results {
+        match result.await {
+            Ok(data) => return (StatusCode::OK, Json(data)).into_response(),
+            Err(_) => continue,
+        }
+    }
+
+    get_error("No data found for the given address".to_string())
+}
+
+fn create_legacy_pipeline(address: &String) -> Vec<Document> {
+    vec![
+        doc! { "$match": { "_cursor.to": null, "rev_address": address,     "$expr": {
+          "$eq": ["$rev_address", "$legacy_address"]
+        } } },
+        doc! { "$project": {
+            "domain": 1,
+            "domain_expiry" : "$expiry"
+        }},
+    ]
+}
+
+fn create_normal_pipeline(address: &String) -> Vec<Document> {
+    vec![
+        doc! { "$match": { "_cursor.to": null, "rev_address": address } },
         doc! { "$lookup": {
             "from": "id_owners",
             "let": { "rev_address": "$rev_address" },
@@ -71,13 +131,12 @@ pub async fn handler(
             "domain": 1,
             "domain_expiry" : "$expiry"
         }},
-    ];
+    ]
+}
 
-    let id_owners = state
-        .starknetid_db
-        .collection::<mongodb::bson::Document>("id_owners");
-    let main_id_pipeline = vec![
-        doc! { "$match": { "_cursor.to": null, "owner": hex_addr, "main": true } },
+fn create_main_id_pipeline(address: &String) -> Vec<Document> {
+    vec![
+        doc! { "$match": { "_cursor.to": null, "owner": address, "main": true } },
         doc! { "$lookup": {
             "from": "domains",
             "let": { "id": "$id" },
@@ -94,57 +153,5 @@ pub async fn handler(
             "domain": "$domain_data.domain",
             "domain_expiry" : "$domain_data.expiry"
         }},
-    ];
-
-    let cursor: Result<mongodb::Cursor<mongodb::bson::Document>, &str> = domains
-        .aggregate(legacy_pipeline, AggregateOptions::default())
-        .await
-        .map_err(|_| "Error while executing aggregation pipeline");
-
-    match cursor {
-        Ok(mut cursor) => {
-            while let Some(result) = cursor.next().await {
-                return match result {
-                    Ok(doc) => {
-                        let domain = doc.get_str("domain").unwrap_or_default().to_owned();
-                        let domain_expiry = doc.get_i64("domain_expiry").ok();
-                        let data = AddrToDomainData {
-                            domain,
-                            domain_expiry,
-                        };
-                        (StatusCode::OK, Json(data)).into_response()
-                    }
-                    Err(e) => get_error(format!("Error calling the db: {}", e)),
-                };
-            }
-
-            // now trying default pipeline
-            let cursor: Result<mongodb::Cursor<mongodb::bson::Document>, &str> = id_owners
-                .aggregate(main_id_pipeline, AggregateOptions::default())
-                .await
-                .map_err(|_| "Error while executing aggregation pipeline");
-
-            match cursor {
-                Ok(mut cursor) => {
-                    while let Some(result) = cursor.next().await {
-                        return match result {
-                            Ok(doc) => {
-                                let domain = doc.get_str("domain").unwrap_or_default().to_owned();
-                                let domain_expiry = doc.get_i64("domain_expiry").ok();
-                                let data = AddrToDomainData {
-                                    domain,
-                                    domain_expiry,
-                                };
-                                (StatusCode::OK, Json(data)).into_response()
-                            }
-                            Err(e) => get_error(format!("Error calling the db: {}", e)),
-                        };
-                    }
-                    return get_error("No document found for the given address".to_string());
-                }
-                Err(e) => get_error(format!("Error calling the db: {}", e)),
-            }
-        }
-        Err(e) => get_error(format!("Error accessing the database: {}", e)),
-    }
+    ]
 }
