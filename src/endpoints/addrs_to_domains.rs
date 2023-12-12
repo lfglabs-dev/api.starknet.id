@@ -1,17 +1,22 @@
 use crate::{models::AppState, utils::to_hex};
+use anyhow::{Context, Result};
 use axum::{
     extract::{Json, State},
     http::StatusCode,
     response::IntoResponse,
 };
 use futures::stream::StreamExt;
-use mongodb::{bson::doc, options::AggregateOptions};
+use mongodb::{
+    bson::{doc, Document},
+    options::AggregateOptions,
+    Cursor,
+};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 use std::sync::Arc;
 
 #[derive(Serialize)]
-pub struct AddrToDomainData {
+struct AddrToDomainData {
     domain: Option<String>,
     address: String,
 }
@@ -20,6 +25,37 @@ pub struct AddrToDomainData {
 pub struct AddrToDomainsQuery {
     addresses: Vec<FieldElement>,
 }
+
+async fn process_cursor(
+    mut cursor: Cursor<Document>,
+    results: &mut Vec<AddrToDomainData>,
+) -> Result<()> {
+    while let Some(result) = cursor.next().await {
+        let doc = result.context("Failed to retrieve document from cursor")?;
+        if let (Ok(domain), Ok(address)) = (doc.get_str("domain"), doc.get_str("address")) {
+            if let Some(data) = results.iter_mut().find(|d| d.address == address) {
+                if data.domain == None {
+                    data.domain = Some(domain.to_string());
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+async fn run_aggregation_pipeline(
+    collection: mongodb::Collection<Document>,
+    pipeline: Vec<Document>,
+    results: &mut Vec<AddrToDomainData>,
+) -> Result<()> {
+    let cursor = collection
+        .aggregate(pipeline, AggregateOptions::default())
+        .await
+        .context("Failed to execute aggregation pipeline")?;
+
+    process_cursor(cursor, results).await
+}
+
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Json(query): Json<AddrToDomainsQuery>,
@@ -31,21 +67,67 @@ pub async fn handler(
         .starknetid_db
         .collection::<mongodb::bson::Document>("id_owners");
 
-    let addresses: Vec<String> = query.addresses.iter().map(|addr| to_hex(addr)).collect();
-    println!("addresses: {:?}", addresses);
+    let addresses: Vec<String> = query.addresses.iter().map(to_hex).collect();
 
-    // Initialize results with all addresses set to domain: None
-    let mut results: Vec<AddrToDomainData> = addresses
+    let mut results = addresses
         .iter()
         .map(|addr| AddrToDomainData {
             domain: None,
             address: addr.clone(),
         })
-        .collect();
+        .collect::<Vec<_>>();
 
-    // Primary Query (Legacy)
-    let legacy_pipeline = vec![
-        doc! { "$match": { "_cursor.to": null, "rev_address": { "$in": &addresses } } },
+    let legacy_pipeline = create_legacy_pipeline(&addresses);
+    if let Err(e) =
+        run_aggregation_pipeline(domains_collection.clone(), legacy_pipeline, &mut results).await
+    {
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_string())).into_response();
+    }
+
+    let normal_pipeline = create_normal_pipeline(&addresses);
+    if let Err(e) =
+        run_aggregation_pipeline(domains_collection.clone(), normal_pipeline, &mut results).await
+    {
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_string())).into_response();
+    }
+
+    let fallback_addresses = results
+        .iter()
+        .filter_map(|data| data.domain.is_none().then(|| data.address.clone()))
+        .collect::<Vec<_>>();
+
+    let fallback_pipeline = create_fallback_pipeline(&fallback_addresses);
+    if let Err(e) =
+        run_aggregation_pipeline(id_owners_collection, fallback_pipeline, &mut results).await
+    {
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_string())).into_response();
+    }
+
+    (StatusCode::OK, Json(results)).into_response()
+}
+
+fn create_legacy_pipeline(addresses: &[String]) -> Vec<Document> {
+    vec![
+        doc! {
+            "$match": {
+                "legacy_address": { "$in": addresses.clone() },
+                "_cursor.to": null,
+                "$expr": { "$eq": ["$legacy_address", "$rev_address"] },
+            },
+        },
+        doc! {
+            "$project": {
+                "_id": 0,
+                "domain": 1,
+                "address": "$legacy_address",
+            },
+        },
+    ]
+}
+
+fn create_normal_pipeline(addresses: &[String]) -> Vec<Document> {
+    vec![
+        doc! { "$match": { "_cursor.to": null, "rev_address": { "$in": addresses } } },
         doc! { "$lookup": {
             "from": "id_owners",
             "let": { "rev_address": "$rev_address" },
@@ -81,40 +163,15 @@ pub async fn handler(
             "domain": 1,
             "address" : "$rev_address",
         }},
-    ];
-    let cursor = domains_collection
-        .aggregate(legacy_pipeline, AggregateOptions::default())
-        .await;
+    ]
+}
 
-    if let Ok(mut cursor) = cursor {
-        while let Some(doc) = cursor.next().await {
-            if let Ok(doc) = doc {
-                if let (Ok(domain), Ok(address)) = (doc.get_str("domain"), doc.get_str("address")) {
-                    // Find the corresponding address in results and update its domain
-                    if let Some(result) = results.iter_mut().find(|data| data.address == address) {
-                        result.domain = Some(domain.to_string());
-                    }
-                }
-            }
-        }
-    }
-
-    // Fallback Query
-    let fallback_addresses: Vec<String> = results
-        .iter()
-        .filter_map(|data| {
-            if data.domain.is_none() {
-                Some(data.address.clone())
-            } else {
-                None
-            }
-        })
-        .collect();
-    let fallback_pipeline = vec![
+fn create_fallback_pipeline(fallback_addresses: &[String]) -> Vec<Document> {
+    vec![
         doc! {
             "$match": {
                 "_cursor.to": null,
-                "owner": { "$in": fallback_addresses.clone() },
+                "owner": { "$in": fallback_addresses },
                 "main": true
             }
         },
@@ -139,22 +196,5 @@ pub async fn handler(
                 "address": "$owner",
             }
         },
-    ];
-    let cursor = id_owners_collection
-        .aggregate(fallback_pipeline, AggregateOptions::default())
-        .await;
-    if let Ok(mut cursor) = cursor {
-        while let Some(doc) = cursor.next().await {
-            if let Ok(doc) = doc {
-                if let (Ok(domain), Ok(address)) = (doc.get_str("domain"), doc.get_str("address")) {
-                    // Find the corresponding address in results and update its domain
-                    if let Some(result) = results.iter_mut().find(|data| data.address == address) {
-                        result.domain = Some(domain.to_string());
-                    }
-                }
-            }
-        }
-    }
-
-    (StatusCode::OK, Json(results)).into_response()
+    ]
 }
