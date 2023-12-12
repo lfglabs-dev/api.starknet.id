@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-starknet = { git = "https://github.com/Th0rgal/starknet-rs.git", branch = "feat/starknet-id" }
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "0df9ad3417a5f10d486348737fe75659ca4bcfdc" }
 axum = "0.6.18"
 futures = "0.3.28"
 mongodb = "2.5.0"
