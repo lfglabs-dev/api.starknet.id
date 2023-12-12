@@ -85,7 +85,7 @@ pub async fn handler(
                     "addr": {
                         "$cond": {
                             "if": { "$and": [
-                                { "$ne": [{ "$type": "$legacy_address" }, "missing"] },
+                                { "$ne": [{ "$type": "$legacy_address" }, "0x0000000000000000000000000000000000000000000000000000000000000000"] },
                                 { "$ne": ["$legacy_address", "0x0000000000000000000000000000000000000000000000000000000000000000"] }
                             ] },
                             "then": "$legacy_address",
