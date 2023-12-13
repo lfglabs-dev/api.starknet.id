@@ -1,3 +1,4 @@
+pub mod addr_has_rev;
 pub mod addr_to_available_ids;
 pub mod addr_to_domain;
 pub mod addr_to_external_domains;
