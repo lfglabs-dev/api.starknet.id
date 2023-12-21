@@ -64,6 +64,9 @@ pub async fn handler(
         doc! {
             "$match": doc! {
                 "owner": to_hex(&query.addr),
+                "id" : {
+                    "$ne" : null
+                  },
                 "_cursor.to": Bson::Null
             }
         },

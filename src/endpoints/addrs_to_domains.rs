@@ -133,6 +133,9 @@ fn create_normal_pipeline(addresses: &[String]) -> Vec<Document> {
             "let": { "rev_address": "$rev_address" },
             "pipeline": [
                  { "$match": {
+                    "id" : {
+                        "$ne" : null
+                      },
                   "$or": [
                     { "_cursor.to": null },
                     { "_cursor.to": { "$exists": false } }
