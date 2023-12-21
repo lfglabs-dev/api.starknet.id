@@ -24,7 +24,7 @@ pub async fn handler(
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
 
-    let collection = state.starknetid_db.collection::<Document>("id_owners");
+    let collection = state.starknetid_db.collection::<Document>("domains");
 
     let mut cursor = match collection.aggregate(get_pipeline(query.domain), None).await {
         Ok(cursor) => cursor,
@@ -123,7 +123,8 @@ fn get_pipeline(domain: String) -> Vec<Document> {
                                 { "_cursor.to": null },
                                 { "_cursor.to": { "$exists": false } }
                             ],
-                            "$expr": { "$eq": ["$id", "$$id"] }
+                            "$expr": { "$eq": ["$id", "$$id"] },
+                            "data": { "$ne": null }
                         }
                     },
                     doc! {
