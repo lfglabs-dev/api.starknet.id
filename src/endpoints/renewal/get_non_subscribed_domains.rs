@@ -9,6 +9,7 @@ use axum::{
 };
 use futures::StreamExt;
 use mongodb::{bson::doc, options::AggregateOptions};
+use regex::Regex;
 use serde::Deserialize;
 use starknet::core::types::FieldElement;
 use std::sync::Arc;
@@ -16,6 +17,10 @@ use std::sync::Arc;
 #[derive(Deserialize)]
 pub struct StarknetIdQuery {
     addr: FieldElement,
+}
+
+lazy_static::lazy_static! {
+    static ref DOMAIN_REGEX: Regex = Regex::new(r"^[^.]+\.stark$").unwrap();
 }
 
 pub async fn handler(
@@ -124,7 +129,9 @@ pub async fn handler(
                     let enabled = doc.get_bool("enabled").unwrap_or(false);
                     if !enabled {
                         if let Ok(domain) = doc.get_str("domain") {
-                            results.push(domain.to_string());
+                            if DOMAIN_REGEX.is_match(domain) {
+                                results.push(domain.to_string());
+                            }
                         }
                     }
                 }
