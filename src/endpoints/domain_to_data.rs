@@ -148,6 +148,7 @@ fn get_pipeline(domain: String) -> Vec<Document> {
                 "creation_date": "$id_data.creation_date",
                 "domain": {
                     "domain": "$domain",
+                    "migrated" : "$migrated",
                     "root": "$root",
                     "creation_date": "$creation_date",
                     "expiry": "$expiry",

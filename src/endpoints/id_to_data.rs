@@ -138,6 +138,7 @@ fn get_pipeline(id: String) -> Vec<Document> {
                 "domain": {
                     "domain": {"$arrayElemAt": ["$domain_data.domain", 0]},
                     "root": {"$arrayElemAt": ["$domain_data.root", 0]},
+                    "migrated" : {"$arrayElemAt": ["$domain_data.migrated", 0]},
                     "creation_date": {"$arrayElemAt": ["$domain_data.creation_date", 0]},
                     "expiry": {"$arrayElemAt": ["$domain_data.expiry", 0]},
                     "resolver": {"$arrayElemAt": ["$domain_data.resolver", 0]},
