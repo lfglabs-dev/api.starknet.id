@@ -52,6 +52,7 @@ pub struct IdentityData {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Domain {
     pub domain: String,
+    pub migrated: bool,
     pub root: bool,
     pub creation_date: u64,
     pub expiry: Option<u64>,
