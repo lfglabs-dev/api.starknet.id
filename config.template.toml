@@ -23,3 +23,7 @@ api_key = "xxxxxx"
 
 [custom_resolvers]
 "0xXXXXXXXXXXXX" = ["domain.stark"]
+
+[solana]
+rpc_url = "https://xxxxxxx.solana-mainnet.quiknode.pro/xxxxxxx"
+private_key = "xxxxxxx"
