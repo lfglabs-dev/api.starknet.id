@@ -2,7 +2,7 @@ use mongodb::Database;
 use starknet::core::types::FieldElement;
 
 use crate::{config::Config, utils::to_hex};
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{ser::SerializeSeq, Deserialize, Serialize, Serializer};
 use std::collections::HashMap;
 
 pub struct AppState {
@@ -36,6 +36,28 @@ where
     }
 }
 
+fn serialize_vec_felt<S>(vec: &Vec<FieldElement>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mut seq = serializer.serialize_seq(Some(vec.len()))?;
+    for element in vec {
+        seq.serialize_element(&SerializedFelt(element))?;
+    }
+    seq.end()
+}
+
+struct SerializedFelt<'a>(&'a FieldElement);
+
+impl<'a> Serialize for SerializedFelt<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serialize_felt(self.0, serializer)
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IdentityData {
     #[serde(serialize_with = "serialize_felt")]
@@ -47,6 +69,7 @@ pub struct IdentityData {
     pub domain: Option<Domain>,
     pub user_data: Vec<UserData>,
     pub verifier_data: Vec<VerifierData>,
+    pub extended_verifier_data: Vec<ExtendedVerifierData>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -80,6 +103,16 @@ pub struct VerifierData {
     pub field: FieldElement,
     #[serde(serialize_with = "serialize_felt")]
     pub data: FieldElement,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ExtendedVerifierData {
+    #[serde(serialize_with = "serialize_felt")]
+    pub verifier: FieldElement,
+    #[serde(serialize_with = "serialize_felt")]
+    pub field: FieldElement,
+    #[serde(serialize_with = "serialize_vec_felt")]
+    pub extended_data: Vec<FieldElement>,
 }
 
 #[derive(Deserialize, Debug)]

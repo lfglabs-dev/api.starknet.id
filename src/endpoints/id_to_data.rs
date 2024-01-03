@@ -129,6 +129,28 @@ fn get_pipeline(id: String) -> Vec<Document> {
             }
         },
         doc! {
+            "$lookup": {
+                "from": "id_verifier_data",
+                "let": {"id": "$id"},
+                "pipeline": [
+                    doc! {
+                        "$match": {
+                            "$or": [
+                                {"_cursor.to": null},
+                                {"_cursor.to": {"$exists": false}}
+                            ],
+                            "$expr": {"$eq": ["$id", "$$id"]},
+                            "extended_data": { "$ne": null }
+                        }
+                    },
+                    doc! {
+                        "$project": {"_id": 0, "field": 1, "extended_data": 1, "verifier": 1}
+                    }
+                ],
+                "as": "extended_verifier_data"
+            }
+        },
+        doc! {
             "$project": {
                 "_id": 0,
                 "id": 1,
@@ -146,7 +168,8 @@ fn get_pipeline(id: String) -> Vec<Document> {
                     "rev_address": {"$arrayElemAt": ["$domain_data.rev_address", 0]}
                 },
                 "user_data": 1,
-                "verifier_data": 1
+                "verifier_data": 1,
+                "extended_verifier_data": 1
             }
         },
     ]
