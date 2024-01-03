@@ -54,7 +54,8 @@ pub async fn handler(
                                     "$$local_id"
                                 ]
                             },
-                            "_cursor.to": null
+                            "root": true,
+                            "_cursor.to": null,
                         }
                     }
                 ],
@@ -78,7 +79,8 @@ pub async fn handler(
                         "$match": doc! {
                             "$expr": doc! {
                                 "$eq": ["$domain", "$$domain_name"]
-                            }
+                            },
+                            "_cursor.to": null
                         }
                     }
                 ],
