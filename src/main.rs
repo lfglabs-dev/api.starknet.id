@@ -148,6 +148,10 @@ async fn main() {
             get(endpoints::renewal::get_non_subscribed_domains::handler),
         )
         .route("/galxe/verify", post(endpoints::galxe::verify::handler))
+        .route(
+            "/crosschain/solana/claim",
+            post(endpoints::crosschain::solana::claim::handler),
+        )
         .with_state(shared_state)
         .layer(cors);
 
