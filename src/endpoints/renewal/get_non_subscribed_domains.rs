@@ -54,7 +54,8 @@ pub async fn handler(
                                     "$$local_id"
                                 ]
                             },
-                            "_cursor.to": null
+                            "root": true,
+                            "_cursor.to": null,
                         }
                     }
                 ],
@@ -78,7 +79,8 @@ pub async fn handler(
                         "$match": doc! {
                             "$expr": doc! {
                                 "$eq": ["$domain", "$$domain_name"]
-                            }
+                            },
+                            "_cursor.to": null
                         }
                     }
                 ],
@@ -125,6 +127,7 @@ pub async fn handler(
         Ok(mut cursor) => {
             let mut results: Vec<String> = Vec::new();
             while let Some(doc) = cursor.next().await {
+                println!("doc: {:?}", doc);
                 if let Ok(doc) = doc {
                     let enabled = doc.get_bool("enabled").unwrap_or(false);
                     if !enabled {
