@@ -13,13 +13,11 @@ use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use starknet::{
-    core::{
-        crypto::{ecdsa_sign, pedersen_hash},
-        types::FieldElement,
-    },
-    id::encode,
+use starknet::core::{
+    crypto::{ecdsa_sign, pedersen_hash},
+    types::FieldElement,
 };
+use starknet_id::encode;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct SigQuery {

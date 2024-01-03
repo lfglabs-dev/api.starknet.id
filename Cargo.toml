@@ -6,7 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "0df9ad3417a5f10d486348737fe75659ca4bcfdc" }
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "c974e5cb42e8d8344cee910b76005ec46b4dd3ed" }
+starknet-id = { git = "https://github.com/starknet-id/starknetid.rs", rev = "2b30c2453b96789a628c86d2edebb1023fa2e77d" }
 axum = "0.6.18"
 futures = "0.3.28"
 mongodb = "2.5.0"
@@ -16,7 +17,7 @@ tokio = { version = "1.28.1", features = ["macros", "rt-multi-thread"] }
 toml = "0.7.4"
 tower-http = { version = "0.4.0", features = ["cors"] }
 chrono = "0.4.24"
-reqwest = "0.11.20"
+reqwest = { version = "0.11.20", features = ["json"] }
 ark-ff = "0.4.2"
 hex = "0.4.3"
 error-stack = "0.4.1"
