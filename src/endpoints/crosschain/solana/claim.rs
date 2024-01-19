@@ -8,6 +8,7 @@ use crate::{
     utils::{get_error, to_hex},
 };
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum_auto_routes::route;
 use chrono::{Duration, Utc};
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use mongodb::bson::doc;
@@ -64,6 +65,11 @@ lazy_static::lazy_static! {
     static ref SOL_SUBDOMAIN_STR: FieldElement = FieldElement::from_dec_str("9145722242464647959622012987758").unwrap();
 }
 
+#[route(
+    post,
+    "/crosschain/solana/claim",
+    crate::endpoints::crosschain::solana::claim
+)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Json(query): Json<SigQuery>,

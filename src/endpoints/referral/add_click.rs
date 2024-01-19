@@ -4,6 +4,7 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
+use axum_auto_routes::route;
 use chrono::Utc;
 use mongodb::{
     bson::{doc, DateTime as BsonDateTime},
@@ -18,6 +19,7 @@ pub struct AddClickQuery {
     sponsor_addr: FieldElement,
 }
 
+#[route(post, "/referral/add_click", crate::endpoints::referral::add_click)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Json(query): Json<AddClickQuery>,

@@ -7,6 +7,7 @@ use axum::{
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Json},
 };
+use axum_auto_routes::route;
 use futures::StreamExt;
 use mongodb::bson::{doc, from_bson, Bson, Document};
 use serde::Deserialize;
@@ -18,6 +19,7 @@ pub struct IdQuery {
     id: FieldElement,
 }
 
+#[route(get, "/id_to_data", crate::endpoints::id_to_data)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<IdQuery>,

@@ -9,6 +9,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use axum_auto_routes::route;
 use futures::StreamExt;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
@@ -25,6 +26,7 @@ pub struct AddrQuery {
     addr: FieldElement,
 }
 
+#[route(get, "/addr_to_available_ids", crate::endpoints::addr_to_available_ids)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<AddrQuery>,

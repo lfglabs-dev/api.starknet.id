@@ -5,6 +5,7 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
+use axum_auto_routes::route;
 use futures::stream::StreamExt;
 use mongodb::{
     bson::{doc, Document},
@@ -56,6 +57,7 @@ async fn run_aggregation_pipeline(
     process_cursor(cursor, results).await
 }
 
+#[route(post, "/addrs_to_domains", crate::endpoints::addrs_to_domains)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Json(query): Json<AddrToDomainsQuery>,

@@ -7,6 +7,7 @@ use axum::{
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Json},
 };
+use axum_auto_routes::route;
 use futures::StreamExt;
 use mongodb::bson::{doc, from_bson, Bson, Document};
 use serde::Deserialize;
@@ -17,6 +18,7 @@ pub struct DomainQuery {
     domain: String,
 }
 
+#[route(get, "/domain_to_data", crate::endpoints::domain_to_data)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<DomainQuery>,

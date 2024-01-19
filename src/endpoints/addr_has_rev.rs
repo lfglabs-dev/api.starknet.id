@@ -8,6 +8,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use axum_auto_routes::route;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
@@ -23,6 +24,7 @@ pub struct AddrHasRevQuery {
     addr: FieldElement,
 }
 
+#[route(get, "/addr_has_rev", crate::endpoints::addr_has_rev)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<AddrHasRevQuery>,

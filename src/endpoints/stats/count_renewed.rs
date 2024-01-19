@@ -5,6 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use axum_auto_routes::route;
 use futures::StreamExt;
 use mongodb::bson::{doc, Bson};
 use serde::{Deserialize, Serialize};
@@ -23,6 +24,7 @@ pub struct CountRenewedQuery {
     segments: i64,
 }
 
+#[route(get, "/stats/count_renewed", crate::endpoints::stats::count_renewed)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<CountRenewedQuery>,

@@ -7,6 +7,7 @@ use axum::{
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Json},
 };
+use axum_auto_routes::route;
 use chrono::NaiveDateTime;
 use futures::StreamExt;
 use mongodb::bson::doc;
@@ -47,6 +48,7 @@ const NFT_PP_CONTRACT: &'static str =
 const NFT_PP_ID: &'static str =
     "0x00000000000000000000000000000000000000000000006e66745f70705f6964";
 
+#[route(get, "/uri", crate::endpoints::uri)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<TokenIdQuery>,

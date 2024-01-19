@@ -5,6 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use axum_auto_routes::route;
 use mongodb::bson::{doc, Bson};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -19,6 +20,7 @@ pub struct CountDomainsQuery {
     since: i64,
 }
 
+#[route(get, "/stats/count_ids", crate::endpoints::stats::count_ids)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<CountDomainsQuery>,

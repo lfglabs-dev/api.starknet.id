@@ -4,6 +4,7 @@ use axum::{
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Json},
 };
+use axum_auto_routes::route;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use futures::StreamExt;
 use mongodb::bson::{doc, Bson, DateTime as BsonDateTime};
@@ -22,6 +23,7 @@ pub struct IdQuery {
     spacing: i64,
 }
 
+#[route(get, "/referral/sales_count", crate::endpoints::referral::sales_count)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<IdQuery>,

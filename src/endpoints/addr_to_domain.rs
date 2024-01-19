@@ -9,6 +9,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use axum_auto_routes::route;
 use futures::StreamExt;
 use mongodb::{
     bson::{doc, Document},
@@ -53,6 +54,7 @@ async fn aggregate_data(
     read_cursor(cursor).await
 }
 
+#[route(get, "/addr_to_domain", crate::endpoints::addr_to_domain)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<AddrToDomainQuery>,
