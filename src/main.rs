@@ -151,6 +151,10 @@ async fn main() {
             "/crosschain/solana/claim",
             post(endpoints::crosschain::solana::claim::handler),
         )
+        .route(
+            "/get_altcoin_quote",
+            get(endpoints::avnu::get_altcoin_quote::handler),
+        )
         .with_state(shared_state)
         .layer(cors);
 
