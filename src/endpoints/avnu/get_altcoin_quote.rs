@@ -34,7 +34,7 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<AddrQuery>,
 ) -> impl IntoResponse {
-    // check is erc20_addr is whitelist
+    // check if erc20_addr is whitelisted
     if !state
         .conf
         .token_support
@@ -44,6 +44,7 @@ pub async fn handler(
         return get_error("Token not supported".to_string());
     }
 
+    // fetch quote from avnu api
     let url = format!(
         "{}/tokens/short?in=0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
         state.conf.token_support.avnu_api
@@ -56,7 +57,6 @@ pub async fn handler(
                     let result = res
                         .iter()
                         .find(|&api_response| api_response.address == query.erc20_addr);
-                    println!("result: {:?}", result);
                     match result {
                         Some(data) => {
                             // compute message hash
@@ -66,7 +66,6 @@ pub async fn handler(
                             .timestamp();
                             // convert current price to wei and return an integer as AVNU api can use more than 18 decimals
                             let current_price_wei = (data.currentPrice * (10u128.pow(18) as f64)) as i64;
-                            println!("current_price_wei: {:?}", current_price_wei);
                             let message_hash = pedersen_hash(
                                 &pedersen_hash(
                                     &pedersen_hash(
@@ -80,7 +79,6 @@ pub async fn handler(
                                 ),
                                 &QUOTE_STR,
                             );
-                            println!("message_hash: {:?}", message_hash);
                             match ecdsa_sign(&state.conf.token_support.private_key.clone(), &message_hash) {
                                 Ok(signature) => (StatusCode::OK, Json(json!({
                                     "quote": current_price_wei,
