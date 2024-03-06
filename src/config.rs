@@ -44,6 +44,13 @@ pub_struct!(Clone, Deserialize; Solana {
     private_key: FieldElement,
 });
 
+pub_struct!(Clone, Deserialize; TokenSupport {
+    avnu_api: String,
+    whitelisted_tokens: Vec<FieldElement>,
+    max_validity: i64,
+    private_key: FieldElement
+});
+
 #[derive(Deserialize)]
 struct RawConfig {
     server: Server,
@@ -52,6 +59,7 @@ struct RawConfig {
     starkscan: Starkscan,
     custom_resolvers: HashMap<String, Vec<String>>,
     solana: Solana,
+    token_support: TokenSupport,
 }
 
 pub_struct!(Clone, Deserialize; Config {
@@ -62,6 +70,7 @@ pub_struct!(Clone, Deserialize; Config {
     custom_resolvers: HashMap<String, Vec<String>>,
     reversed_resolvers: HashMap<String, String>,
     solana: Solana,
+    token_support: TokenSupport,
 });
 
 impl From<RawConfig> for Config {
@@ -80,6 +89,7 @@ impl From<RawConfig> for Config {
             custom_resolvers: raw.custom_resolvers,
             reversed_resolvers,
             solana: raw.solana,
+            token_support: raw.token_support,
         }
     }
 }
