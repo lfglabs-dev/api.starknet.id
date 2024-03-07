@@ -64,8 +64,9 @@ pub async fn handler(
                             let max_validity_timestamp = (now
                                 + Duration::seconds(state.conf.token_support.max_validity))
                             .timestamp();
+                            let quote = 1.0 / data.currentPrice;
                             // convert current price to wei and return an integer as AVNU api can use more than 18 decimals
-                            let current_price_wei = (data.currentPrice * (10u128.pow(18) as f64)) as i64;
+                            let current_price_wei = (quote * (10u128.pow(18) as f64)).to_string();
                             let message_hash = pedersen_hash(
                                 &pedersen_hash(
                                     &pedersen_hash(
