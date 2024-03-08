@@ -10,7 +10,10 @@ use axum_auto_routes::route;
 use chrono::Duration;
 use serde::Deserialize;
 use serde_json::json;
-use starknet::core::{crypto::{ecdsa_sign, pedersen_hash}, types::FieldElement};
+use starknet::core::{
+    crypto::{ecdsa_sign, pedersen_hash},
+    types::FieldElement,
+};
 
 use crate::{models::AppState, utils::get_error};
 
@@ -61,8 +64,8 @@ pub async fn handler(
                         Some(data) => {
                             // compute message hash
                             let now = chrono::Utc::now();
-                            let max_validity_timestamp = (now
-                                + Duration::seconds(state.conf.token_support.max_validity))
+                            let max_quote_validity_timestamp = (now
+                                + Duration::seconds(state.conf.token_support.max_quote_validity))
                             .timestamp();
                             let quote = 1.0 / data.currentPrice;
                             // convert current price to wei and return an integer as AVNU api can use more than 18 decimals
@@ -76,23 +79,33 @@ pub async fn handler(
                                         )
                                         .unwrap(),
                                     ),
-                                    &FieldElement::from_dec_str(max_validity_timestamp.to_string().as_str()).unwrap(),
+                                    &FieldElement::from_dec_str(
+                                        max_quote_validity_timestamp.to_string().as_str(),
+                                    )
+                                    .unwrap(),
                                 ),
                                 &QUOTE_STR,
                             );
-                            match ecdsa_sign(&state.conf.token_support.private_key.clone(), &message_hash) {
-                                Ok(signature) => (StatusCode::OK, Json(json!({
-                                    "quote": current_price_wei,
-                                    "r": signature.r,
-                                    "s": signature.s,
-                                    "max_validity": max_validity_timestamp
-                                }))).into_response(),
+                            match ecdsa_sign(
+                                &state.conf.token_support.private_key.clone(),
+                                &message_hash,
+                            ) {
+                                Ok(signature) => (
+                                    StatusCode::OK,
+                                    Json(json!({
+                                        "quote": current_price_wei,
+                                        "r": signature.r,
+                                        "s": signature.s,
+                                        "max_quote_validity": max_quote_validity_timestamp
+                                    })),
+                                )
+                                    .into_response(),
                                 Err(e) => get_error(format!(
                                     "Error while generating Starknet signature: {}",
                                     e
                                 )),
                             }
-                        },
+                        }
                         None => get_error("Token address not found".to_string()),
                     }
                 }

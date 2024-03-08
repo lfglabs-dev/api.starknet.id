@@ -39,5 +39,5 @@ whitelisted_tokens = [
     # USDT
     "0x068f5c6a61780768455de69077e07e89787839bf8166decfbf92b645209c0fb8",
 ]
-max_validity = 1000 # in seconds
+max_quote_validity = 1000 # in seconds
 private_key = "123"

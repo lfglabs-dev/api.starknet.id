@@ -47,7 +47,7 @@ pub_struct!(Clone, Deserialize; Solana {
 pub_struct!(Clone, Deserialize; TokenSupport {
     avnu_api: String,
     whitelisted_tokens: Vec<FieldElement>,
-    max_validity: i64,
+    max_quote_validity: i64,
     private_key: FieldElement
 });
 
