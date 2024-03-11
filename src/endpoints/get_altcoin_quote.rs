@@ -100,7 +100,7 @@ pub async fn handler(
                                         "quote": current_price_wei,
                                         "r": signature.r,
                                         "s": signature.s,
-                                        "max_validity": max_validity_timestamp
+                                        "max_quote_validity": max_validity_timestamp
                                     })),
                                 )
                                     .into_response(),
