@@ -7,6 +7,7 @@ use axum::{
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Json},
 };
+use axum_auto_routes::route;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
@@ -24,6 +25,7 @@ pub struct StarknetIdQuery {
     data: FieldElement,
 }
 
+#[route(get, "/data_to_ids", crate::endpoints::data_to_ids)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<StarknetIdQuery>,

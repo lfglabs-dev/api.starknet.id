@@ -7,6 +7,7 @@ use axum::{
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Json},
 };
+use axum_auto_routes::route;
 use futures::StreamExt;
 use mongodb::{bson::doc, options::FindOptions};
 use serde::{Deserialize, Serialize};
@@ -24,6 +25,11 @@ pub struct StarknetIdQuery {
     domain: String,
 }
 
+#[route(
+    get,
+    "/renewal/get_renewal_data",
+    crate::endpoints::renewal::get_renewal_data
+)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<StarknetIdQuery>,

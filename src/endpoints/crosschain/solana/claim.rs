@@ -8,18 +8,17 @@ use crate::{
     utils::{get_error, to_hex},
 };
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum_auto_routes::route;
 use chrono::{Duration, Utc};
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use starknet::{
-    core::{
-        crypto::{ecdsa_sign, pedersen_hash},
-        types::FieldElement,
-    },
-    id::encode,
+use starknet::core::{
+    crypto::{ecdsa_sign, pedersen_hash},
+    types::FieldElement,
 };
+use starknet_id::encode;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct SigQuery {
@@ -66,6 +65,11 @@ lazy_static::lazy_static! {
     static ref SOL_SUBDOMAIN_STR: FieldElement = FieldElement::from_dec_str("9145722242464647959622012987758").unwrap();
 }
 
+#[route(
+    post,
+    "/crosschain/solana/claim",
+    crate::endpoints::crosschain::solana::claim
+)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Json(query): Json<SigQuery>,

@@ -5,6 +5,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use axum_auto_routes::route;
 use futures::StreamExt;
 use mongodb::{
     bson::{doc, Bson},
@@ -19,6 +20,11 @@ pub struct CountClubDomainsData {
     count: i32,
 }
 
+#[route(
+    get,
+    "/stats/expired_club_domains",
+    crate::endpoints::stats::expired_club_domains
+)]
 pub async fn handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=60"));

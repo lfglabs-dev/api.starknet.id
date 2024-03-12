@@ -7,6 +7,7 @@ use axum::{
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Json},
 };
+use axum_auto_routes::route;
 use futures::TryStreamExt;
 use mongodb::bson::{doc, Bson};
 use serde::{Deserialize, Serialize};
@@ -24,6 +25,7 @@ pub struct GetMetaHashQuery {
     addr: FieldElement,
 }
 
+#[route(get, "/renewal/get_metahash", crate::endpoints::renewal::get_metahash)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<GetMetaHashQuery>,

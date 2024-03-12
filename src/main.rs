@@ -6,16 +6,18 @@ mod models;
 mod resolving;
 mod tax;
 mod utils;
-use axum::{
-    http::StatusCode,
-    routing::{get, post},
-    Router,
-};
+use axum::{http::StatusCode, Router};
+use axum_auto_routes::route;
 use mongodb::{bson::doc, options::ClientOptions, Client};
-use std::net::SocketAddr;
 use std::sync::Arc;
+use std::{net::SocketAddr, sync::Mutex};
+use utils::WithState;
 
 use tower_http::cors::{Any, CorsLayer};
+
+lazy_static::lazy_static! {
+    pub static ref ROUTE_REGISTRY: Mutex<Vec<Box<dyn WithState>>> = Mutex::new(Vec::new());
+}
 
 #[tokio::main]
 async fn main() {
@@ -58,100 +60,14 @@ async fn main() {
     }
 
     let cors = CorsLayer::new().allow_headers(Any).allow_origin(Any);
-    let app = Router::new()
-        .route("/", get(root))
-        .route(
-            "/addr_to_available_ids",
-            get(endpoints::addr_to_available_ids::handler),
-        )
-        .route("/addr_to_domain", get(endpoints::addr_to_domain::handler))
-        .route(
-            "/addr_to_external_domains",
-            get(endpoints::addr_to_external_domains::handler),
-        )
-        .route(
-            "/addr_to_full_ids",
-            get(endpoints::addr_to_full_ids::handler),
-        )
-        .route(
-            "/addr_to_token_id",
-            get(endpoints::addr_to_token_id::handler),
-        )
-        .route(
-            "/addrs_to_domains",
-            post(endpoints::addrs_to_domains::handler),
-        )
-        .route("/data_to_ids", get(endpoints::data_to_ids::handler))
-        .route("/domain_to_addr", get(endpoints::domain_to_addr::handler))
-        .route("/domain_to_data", get(endpoints::domain_to_data::handler))
-        .route("/id_to_data", get(endpoints::id_to_data::handler))
-        .route("/uri", get(endpoints::uri::handler))
-        .route(
-            "/referral/add_click",
-            post(endpoints::referral::add_click::handler),
-        )
-        .route(
-            "/referral/revenue",
-            get(endpoints::referral::revenue::handler),
-        )
-        .route(
-            "/referral/sales_count",
-            get(endpoints::referral::sales_count::handler),
-        )
-        .route(
-            "/referral/click_count",
-            get(endpoints::referral::click_count::handler),
-        )
-        .route(
-            "/stats/count_addrs",
-            get(endpoints::stats::count_addrs::handler),
-        )
-        .route(
-            "/stats/count_club_domains",
-            get(endpoints::stats::count_club_domains::handler),
-        )
-        .route(
-            "/stats/count_domains",
-            get(endpoints::stats::count_domains::handler),
-        )
-        .route(
-            "/stats/count_ids",
-            get(endpoints::stats::count_ids::handler),
-        )
-        .route(
-            "/stats/count_created",
-            get(endpoints::stats::count_created::handler),
-        )
-        .route(
-            "/stats/expired_club_domains",
-            get(endpoints::stats::expired_club_domains::handler),
-        )
-        .route(
-            "/stats/count_renewed",
-            get(endpoints::stats::count_renewed::handler),
-        )
-        .route(
-            "/starkscan/fetch_nfts",
-            get(endpoints::starkscan::fetch_nfts::handler),
-        )
-        .route(
-            "/renewal/get_renewal_data",
-            get(endpoints::renewal::get_renewal_data::handler),
-        )
-        .route(
-            "/renewal/get_metahash",
-            get(endpoints::renewal::get_metahash::handler),
-        )
-        .route(
-            "/renewal/get_non_subscribed_domains",
-            get(endpoints::renewal::get_non_subscribed_domains::handler),
-        )
-        .route("/galxe/verify", post(endpoints::galxe::verify::handler))
-        .route(
-            "/crosschain/solana/claim",
-            post(endpoints::crosschain::solana::claim::handler),
-        )
-        .with_state(shared_state)
+    let app = ROUTE_REGISTRY
+        .lock()
+        .unwrap()
+        .clone()
+        .into_iter()
+        .fold(Router::new().with_state(shared_state.clone()), |acc, r| {
+            acc.merge(r.to_router(shared_state.clone()))
+        })
         .layer(cors);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], conf.server.port));
@@ -162,6 +78,7 @@ async fn main() {
         .unwrap();
 }
 
+#[route(get, "/")]
 async fn root() -> (StatusCode, String) {
     (
         StatusCode::ACCEPTED,

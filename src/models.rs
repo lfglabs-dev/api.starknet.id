@@ -1,7 +1,8 @@
 use mongodb::Database;
+use starknet::core::types::FieldElement;
 
-use crate::config::Config;
-use serde::{Deserialize, Serialize};
+use crate::{config::Config, utils::to_hex};
+use serde::{ser::SerializeSeq, Deserialize, Serialize, Serializer};
 use std::collections::HashMap;
 
 pub struct AppState {
@@ -11,32 +12,107 @@ pub struct AppState {
     pub states: States,
 }
 
-#[derive(Serialize)]
-pub struct Data {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub domain: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub addr: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub domain_expiry: Option<i64>,
-    pub is_owner_main: bool,
-    pub owner_addr: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub github: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub twitter: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub discord: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub old_github: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub old_twitter: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub old_discord: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub proof_of_personhood: Option<bool>,
-    pub starknet_id: String,
-    pub img_url: Option<String>,
+fn serialize_felt<S>(field_element: &FieldElement, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let hex_string = to_hex(field_element);
+    serializer.serialize_str(&hex_string)
+}
+
+fn serialize_opt_felt<S>(
+    field_element: &Option<FieldElement>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match field_element {
+        Some(fe) => {
+            let hex_string = to_hex(fe);
+            serializer.serialize_str(&hex_string)
+        }
+        None => serializer.serialize_none(),
+    }
+}
+
+fn serialize_vec_felt<S>(vec: &Vec<FieldElement>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mut seq = serializer.serialize_seq(Some(vec.len()))?;
+    for element in vec {
+        seq.serialize_element(&SerializedFelt(element))?;
+    }
+    seq.end()
+}
+
+struct SerializedFelt<'a>(&'a FieldElement);
+
+impl<'a> Serialize for SerializedFelt<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serialize_felt(self.0, serializer)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct IdentityData {
+    #[serde(serialize_with = "serialize_felt")]
+    pub id: FieldElement,
+    #[serde(serialize_with = "serialize_felt")]
+    pub owner: FieldElement,
+    pub main: bool,
+    pub creation_date: u64,
+    pub domain: Option<Domain>,
+    pub user_data: Vec<UserData>,
+    pub verifier_data: Vec<VerifierData>,
+    pub extended_verifier_data: Vec<ExtendedVerifierData>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Domain {
+    pub domain: String,
+    pub migrated: bool,
+    pub root: bool,
+    pub creation_date: u64,
+    pub expiry: Option<u64>,
+    #[serde(serialize_with = "serialize_opt_felt")]
+    pub resolver: Option<FieldElement>,
+    #[serde(serialize_with = "serialize_opt_felt")]
+    pub legacy_address: Option<FieldElement>,
+    #[serde(serialize_with = "serialize_opt_felt")]
+    pub rev_address: Option<FieldElement>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UserData {
+    #[serde(serialize_with = "serialize_felt")]
+    pub field: FieldElement,
+    #[serde(serialize_with = "serialize_felt")]
+    pub data: FieldElement,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct VerifierData {
+    #[serde(serialize_with = "serialize_felt")]
+    pub verifier: FieldElement,
+    #[serde(serialize_with = "serialize_felt")]
+    pub field: FieldElement,
+    #[serde(serialize_with = "serialize_felt")]
+    pub data: FieldElement,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ExtendedVerifierData {
+    #[serde(serialize_with = "serialize_felt")]
+    pub verifier: FieldElement,
+    #[serde(serialize_with = "serialize_felt")]
+    pub field: FieldElement,
+    #[serde(serialize_with = "serialize_vec_felt")]
+    pub extended_data: Vec<FieldElement>,
 }
 
 #[derive(Deserialize, Debug)]

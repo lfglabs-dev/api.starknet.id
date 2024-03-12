@@ -8,6 +8,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use axum_auto_routes::route;
 use futures::future::join_all;
 use futures::stream::StreamExt;
 use mongodb::{
@@ -52,6 +53,7 @@ pub struct FullIdResponse {
     full_ids: Vec<FullId>,
 }
 
+#[route(get, "/addr_to_full_ids", crate::endpoints::addr_to_full_ids)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<AddrQuery>,
@@ -64,6 +66,9 @@ pub async fn handler(
         doc! {
             "$match": doc! {
                 "owner": to_hex(&query.addr),
+                "id" : {
+                    "$ne" : null
+                  },
                 "_cursor.to": Bson::Null
             }
         },

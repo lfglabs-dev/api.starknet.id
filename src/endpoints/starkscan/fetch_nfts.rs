@@ -7,6 +7,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Json},
 };
+use axum_auto_routes::route;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -44,6 +45,7 @@ pub struct StarkscanNftProps {
     minted_at_timestamp: i64,
 }
 
+#[route(get, "/starkscan/fetch_nfts", crate::endpoints::starkscan::fetch_nfts)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<FetchNftsQuery>,

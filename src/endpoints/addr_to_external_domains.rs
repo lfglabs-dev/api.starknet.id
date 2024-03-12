@@ -7,6 +7,7 @@ use axum::{
     http::{HeaderMap, HeaderValue, StatusCode},
     response::IntoResponse,
 };
+use axum_auto_routes::route;
 use futures::StreamExt;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
@@ -23,6 +24,11 @@ pub struct DomainQuery {
     addr: FieldElement,
 }
 
+#[route(
+    get,
+    "/addr_to_external_domains",
+    crate::endpoints::addr_to_external_domains
+)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<DomainQuery>,

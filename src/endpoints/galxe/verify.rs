@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::models::AppState;
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum_auto_routes::route;
 use futures::StreamExt;
 use mongodb::{bson::doc, bson::Document};
 use serde::{Deserialize, Serialize};
@@ -16,6 +17,7 @@ pub struct SimpleResponse {
     result: &'static str,
 }
 
+#[route(post, "/galxe/verify", crate::endpoints::galxe::verify)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Json(query): Json<EmailQuery>,

@@ -7,6 +7,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Json},
 };
+use axum_auto_routes::route;
 use futures::StreamExt;
 use mongodb::{bson::doc, options::AggregateOptions};
 use regex::Regex;
@@ -23,6 +24,11 @@ lazy_static::lazy_static! {
     static ref DOMAIN_REGEX: Regex = Regex::new(r"^[^.]+\.stark$").unwrap();
 }
 
+#[route(
+    get,
+    "/renewal/get_non_subscribed_domains",
+    crate::endpoints::renewal::get_non_subscribed_domains
+)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<StarknetIdQuery>,
