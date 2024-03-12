@@ -112,7 +112,7 @@ fn create_legacy_pipeline(addresses: &[String]) -> Vec<Document> {
     vec![
         doc! {
             "$match": {
-                "legacy_address": { "$in": addresses.clone() },
+                "legacy_address": { "$in": addresses },
                 "_cursor.to": null,
                 "$expr": { "$eq": ["$legacy_address", "$rev_address"] },
             },
