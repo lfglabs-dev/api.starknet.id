@@ -5,7 +5,7 @@ use axum::{
     response::{IntoResponse, Json},
 };
 use axum_auto_routes::route;
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{NaiveDateTime, TimeZone, Utc};
 use futures::StreamExt;
 use mongodb::bson::{doc, Bson, DateTime as BsonDateTime};
 use serde::{Deserialize, Serialize};
@@ -38,15 +38,14 @@ pub async fn handler(
     let mut output = Data { revenues: vec![] };
     let mut i = 0;
     loop {
-        let start_time = DateTime::<Utc>::from_utc(
-            NaiveDateTime::from_timestamp_opt(query.since_date + i * query.spacing, 0).unwrap(),
-            Utc,
-        );
-        let end_time = DateTime::<Utc>::from_utc(
+        let start_naive_dt =
+            NaiveDateTime::from_timestamp_opt(query.since_date + i * query.spacing, 0).unwrap();
+        let start_time = Utc.from_utc_datetime(&start_naive_dt);
+
+        let end_naive_dt =
             NaiveDateTime::from_timestamp_opt(query.since_date + (i + 1) * query.spacing, 0)
-                .unwrap(),
-            Utc,
-        );
+                .unwrap();
+        let end_time = Utc.from_utc_datetime(&end_naive_dt);
 
         let documents = referral_revenues
             .find(
