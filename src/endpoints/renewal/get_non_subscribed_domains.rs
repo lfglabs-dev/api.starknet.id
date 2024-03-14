@@ -100,12 +100,40 @@ pub async fn handler(
             }
         },
         doc! {
+            "$lookup": {
+                "from": "auto_renew_flows_altcoins",
+                "let": doc! { "domain_name": "$domainData.domain" },
+                "pipeline": [
+                    doc! {
+                        "$match": doc! {
+                            "$expr": doc! {
+                                "$eq": ["$domain", "$$domain_name"]
+                            },
+                            "_cursor.to": null
+                        }
+                    }
+                ],
+                "as": "renew_flows_altcoins"
+            }
+        },
+        doc! {
+            "$unwind": {
+                "path": "$renew_flows_altcoins",
+                "preserveNullAndEmptyArrays": true
+            }
+        },
+        doc! {
             "$match": {
                 "$or": [
                     { "renew_flows": { "$eq": null } },
                     {
                         "renew_flows.renewer_address": &addr,
                         "renew_flows._cursor.to": null
+                    },
+                    { "renew_flows_altcoins": { "$eq": null } },
+                    {
+                        "renew_flows_altcoins.renewer_address": &addr,
+                        "renew_flows_altcoins._cursor.to": null
                     }
                 ]
             }
@@ -115,11 +143,18 @@ pub async fn handler(
                 "_id": 0,
                 "id": 1,
                 "domain": "$domainData.domain",
-                "enabled": {
+                "enabled":  {
                     "$cond": {
                         "if": { "$eq": ["$renew_flows", null] },
                         "then": false,
                         "else": "$renew_flows.enabled"
+                    }
+                },
+                "enabled_altcoin":  {
+                    "$cond": {
+                        "if": { "$eq": ["$renew_flows_altcoins", null] },
+                        "then": false,
+                        "else": "$renew_flows_altcoins.enabled"
                     }
                 },
             }
@@ -135,7 +170,8 @@ pub async fn handler(
             while let Some(doc) = cursor.next().await {
                 if let Ok(doc) = doc {
                     let enabled = doc.get_bool("enabled").unwrap_or(false);
-                    if !enabled {
+                    let enabled_altcoin = doc.get_bool("enabled_altcoin").unwrap_or(false);
+                    if !enabled && !enabled_altcoin {
                         if let Ok(domain) = doc.get_str("domain") {
                             if DOMAIN_REGEX.is_match(domain) {
                                 results.push(domain.to_string());
