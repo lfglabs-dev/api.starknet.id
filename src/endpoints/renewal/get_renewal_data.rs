@@ -34,20 +34,56 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<StarknetIdQuery>,
 ) -> impl IntoResponse {
-    let renew_collection = state
-        .starknetid_db
-        .collection::<mongodb::bson::Document>("auto_renew_flows");
+    let result_auto_renew_flows = find_renewal_data(&state, "auto_renew_flows", &query).await;
 
-    let find_options = FindOptions::builder()
+    let mut document_to_return = None;
+
+    if let Ok(Some(doc)) = result_auto_renew_flows {
+        if doc.get_bool("enabled").unwrap_or(true) {
+            // If enabled is true, return this document
+            document_to_return = Some(doc);
+        } else {
+            // If enabled is false, check auto_renew_flows_altcoins but keep this document as a fallback.
+            let result_altcoins = find_renewal_data(&state, "auto_renew_flows_altcoins", &query)
+                .await
+                .ok()
+                .flatten();
+            document_to_return = result_altcoins.or(Some(doc)); // Use the altcoins result or fallback to the original document.
+        }
+    }
+
+    let mut headers = HeaderMap::new();
+    headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
+
+    match document_to_return {
+        Some(mut doc) => {
+            doc.remove("_id");
+            doc.remove("_cursor");
+            (StatusCode::OK, headers, Json(doc)).into_response()
+        }
+        None => get_error("Error while fetching from database or no results found".to_string()),
+    }
+}
+
+async fn find_renewal_data(
+    state: &AppState,
+    collection_name: &str,
+    query: &StarknetIdQuery,
+) -> mongodb::error::Result<Option<mongodb::bson::Document>> {
+    let collection = state
+        .starknetid_db
+        .collection::<mongodb::bson::Document>(collection_name);
+
+    let find_options = mongodb::options::FindOptions::builder()
         .sort(doc! {"_cursor.from": -1})
         .limit(1)
         .build();
 
-    let documents = renew_collection
+    let mut cursor = collection
         .find(
             doc! {
                 "renewer_address": to_hex(&query.addr),
-                "domain": query.domain,
+                "domain": &query.domain,
                 "$or": [
                     { "_cursor.to": { "$exists": false } },
                     { "_cursor.to": null },
@@ -55,27 +91,7 @@ pub async fn handler(
             },
             find_options,
         )
-        .await;
+        .await?;
 
-    match documents {
-        Ok(mut cursor) => {
-            let mut headers = HeaderMap::new();
-            headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
-
-            if let Some(result) = cursor.next().await {
-                match result {
-                    Ok(res) => {
-                        let mut res = res;
-                        res.remove("_id");
-                        res.remove("_cursor");
-                        (StatusCode::OK, headers, Json(res)).into_response()
-                    }
-                    Err(e) => get_error(format!("Error while processing the document: {:?}", e)),
-                }
-            } else {
-                get_error("no results founds".to_string())
-            }
-        }
-        Err(_) => get_error("Error while fetching from database".to_string()),
-    }
+    Ok(cursor.next().await.transpose()?)
 }
