@@ -9,8 +9,8 @@ use axum_auto_routes::route;
 use futures::TryStreamExt;
 use mongodb::bson::{self, doc, Bson};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 #[derive(Serialize)]
 pub struct CountClubDomainsData {
@@ -23,7 +23,11 @@ pub struct CountClubDomainsQuery {
     since: i64,
 }
 
-#[route(get, "/stats/count_club_domains", crate::endpoints::stats::count_club_domains)]
+#[route(
+    get,
+    "/stats/count_club_domains",
+    crate::endpoints::stats::count_club_domains
+)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<CountClubDomainsQuery>,
@@ -31,7 +35,9 @@ pub async fn handler(
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=60"));
 
-    let domain_collection = state.starknetid_db.collection::<mongodb::bson::Document>("domains");
+    let domain_collection = state
+        .starknetid_db
+        .collection::<mongodb::bson::Document>("domains");
     let subdomain_collection = state
         .starknetid_db
         .collection::<mongodb::bson::Document>("custom_resolutions");
@@ -162,51 +168,66 @@ pub async fn handler(
             }
         ], None).await.unwrap().try_collect::<Vec<bson::Document>>().await.unwrap();
 
-        let mut count_99 = 0;
-        let mut count_999 = 0;
-        let mut count_10k = 0;
-    
-        let mut output: Vec<HashMap<String, i32>> = Vec::new();
-        let mut output_map: HashMap<String, i32> = HashMap::new();
+    let mut count_99 = 0;
+    let mut count_999 = 0;
+    let mut count_10k = 0;
 
-        for doc in &db_output {
-            if let Ok(club) = doc.get_str("club") {
-                match club {
-                    "99" => count_99 = doc.get_i32("count").unwrap_or_default(),
-                    "999" => count_999 = doc.get_i32("count").unwrap_or_default(),
-                    "10k" => count_10k = doc.get_i32("count").unwrap_or_default(),
-                    _ => (),
+    let mut output: Vec<HashMap<String, i32>> = Vec::new();
+    let mut output_map: HashMap<String, i32> = HashMap::new();
+
+    for doc in &db_output {
+        if let Ok(club) = doc.get_str("club") {
+            match club {
+                "99" => count_99 = doc.get_i32("count").unwrap_or_default(),
+                "999" => count_999 = doc.get_i32("count").unwrap_or_default(),
+                "10k" => count_10k = doc.get_i32("count").unwrap_or_default(),
+                _ => (),
+            }
+        }
+    }
+
+    for doc in db_output {
+        if let Ok(club) = doc.get_str("club") {
+            match club {
+                "two_letters" => {
+                    output_map.insert(
+                        club.to_string(),
+                        doc.get_i32("count").unwrap_or_default() + count_99,
+                    );
+                }
+                "three_letters" => {
+                    output_map.insert(
+                        club.to_string(),
+                        doc.get_i32("count").unwrap_or_default() + count_999,
+                    );
+                }
+                "four_letters" => {
+                    output_map.insert(
+                        club.to_string(),
+                        doc.get_i32("count").unwrap_or_default() + count_10k,
+                    );
+                }
+                _ => {
+                    output_map.insert(club.to_string(), doc.get_i32("count").unwrap_or_default());
                 }
             }
         }
+        output.push(output_map.clone());
+        output_map.clear();
+    }
 
-        for doc in db_output {
-            if let Ok(club) = doc.get_str("club") {
-                match club {
-                    "two_letters" => {
-                        output_map.insert(club.to_string(), doc.get_i32("count").unwrap_or_default() + count_99);
-                    }
-                    "three_letters" => {
-                        output_map.insert(club.to_string(), doc.get_i32("count").unwrap_or_default() + count_999);
-                    }
-                    "four_letters" => {
-                        output_map.insert(club.to_string(), doc.get_i32("count").unwrap_or_default() + count_10k);
-                    }
-                    _ => {
-                        output_map.insert(club.to_string(), doc.get_i32("count").unwrap_or_default());
-                    }
-                }
-            }
-            output.push(output_map.clone());
-            output_map.clear();
-        }
+    for doc in subdomain_output {
+        output_map.insert(
+            doc.get_str("club").unwrap_or_default().to_string(),
+            doc.get_i32("count").unwrap_or_default(),
+        );
+        output_map.insert(
+            doc.get_str("club").unwrap_or_default().to_string(),
+            doc.get_i32("count").unwrap_or_default(),
+        );
+        output.push(output_map.clone());
+        output_map.clear();
+    }
 
-        for doc in subdomain_output {
-            output_map.insert(doc.get_str("club").unwrap_or_default().to_string(), doc.get_i32("count").unwrap_or_default());
-            output_map.insert(doc.get_str("club").unwrap_or_default().to_string(), doc.get_i32("count").unwrap_or_default());
-            output.push(output_map.clone());
-            output_map.clear();
-        }
-
-        (StatusCode::OK, headers, Json(output)).into_response()
+    (StatusCode::OK, headers, Json(output)).into_response()
 }

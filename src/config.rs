@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
 use std::env;
@@ -44,6 +44,28 @@ pub_struct!(Clone, Deserialize; Solana {
     private_key: FieldElement,
 });
 
+pub_struct!(Clone, Debug, Deserialize; AltcoinData {
+    address: FieldElement,
+    min_price: u64,
+    max_price: u64,
+    decimals: u32,
+    max_quote_validity: i64
+});
+
+#[derive(Debug, Deserialize)]
+struct TempAltcoins {
+    avnu_api: String,
+    private_key: FieldElement,
+    #[serde(flatten)]
+    data: HashMap<String, AltcoinData>,
+}
+
+pub_struct!(Clone, Debug; Altcoins {
+    avnu_api: String,
+    private_key: FieldElement,
+    data: HashMap<FieldElement, AltcoinData>,
+});
+
 #[derive(Deserialize)]
 struct RawConfig {
     server: Server,
@@ -52,6 +74,7 @@ struct RawConfig {
     starkscan: Starkscan,
     custom_resolvers: HashMap<String, Vec<String>>,
     solana: Solana,
+    altcoins: Altcoins,
 }
 
 pub_struct!(Clone, Deserialize; Config {
@@ -62,7 +85,43 @@ pub_struct!(Clone, Deserialize; Config {
     custom_resolvers: HashMap<String, Vec<String>>,
     reversed_resolvers: HashMap<String, String>,
     solana: Solana,
+    altcoins: Altcoins,
 });
+
+impl Altcoins {
+    fn new(temp: TempAltcoins) -> Self {
+        let data: HashMap<FieldElement, AltcoinData> = temp
+            .data
+            .into_values()
+            .map(|val| {
+                let altcoin_data = AltcoinData {
+                    address: val.address,
+                    min_price: val.min_price,
+                    max_price: val.max_price,
+                    decimals: val.decimals,
+                    max_quote_validity: val.max_quote_validity,
+                };
+                (val.address, altcoin_data)
+            })
+            .collect();
+
+        Altcoins {
+            avnu_api: temp.avnu_api,
+            private_key: temp.private_key,
+            data,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Altcoins {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let temp = TempAltcoins::deserialize(deserializer)?;
+        Ok(Altcoins::new(temp))
+    }
+}
 
 impl From<RawConfig> for Config {
     fn from(raw: RawConfig) -> Self {
@@ -80,6 +139,7 @@ impl From<RawConfig> for Config {
             custom_resolvers: raw.custom_resolvers,
             reversed_resolvers,
             solana: raw.solana,
+            altcoins: raw.altcoins,
         }
     }
 }
