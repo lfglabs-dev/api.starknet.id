@@ -1,8 +1,11 @@
-use mongodb::Database;
+use mongodb::{
+    bson::{from_bson, Bson},
+    Database,
+};
 use starknet::core::types::FieldElement;
 
 use crate::{config::Config, utils::to_hex};
-use serde::{ser::SerializeSeq, Deserialize, Serialize, Serializer};
+use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 
 pub struct AppState {
@@ -66,10 +69,27 @@ pub struct IdentityData {
     pub owner: FieldElement,
     pub main: bool,
     pub creation_date: u64,
+    #[serde(deserialize_with = "deserialize_optional_domain")]
     pub domain: Option<Domain>,
     pub user_data: Vec<UserData>,
     pub verifier_data: Vec<VerifierData>,
     pub extended_verifier_data: Vec<ExtendedVerifierData>,
+}
+
+fn deserialize_optional_domain<'de, D>(deserializer: D) -> Result<Option<Domain>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let bson = Bson::deserialize(deserializer)?;
+    match bson {
+        Bson::Document(doc) if doc.is_empty() => Ok(None),
+        Bson::Document(doc) => from_bson(Bson::Document(doc))
+            .map(Some)
+            .map_err(serde::de::Error::custom),
+        _ => Err(serde::de::Error::custom(
+            "expected a document for domain field",
+        )),
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
