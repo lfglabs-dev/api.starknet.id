@@ -25,7 +25,8 @@ pub struct AddrQuery {
 #[derive(Deserialize, Debug)]
 pub struct AvnuApiResult {
     address: FieldElement,
-    currentPrice: f64,
+    #[serde(rename = "currentPrice")]
+    current_price: f64,
 }
 
 lazy_static::lazy_static! {
@@ -63,7 +64,7 @@ pub async fn handler(
                             let max_validity_timestamp = (now
                                 + Duration::seconds(altcoin_data.max_quote_validity))
                             .timestamp();
-                            let quote = 1.0 / data.currentPrice;
+                            let quote = 1.0 / data.current_price;
                             // check if quote is within the valid range
                             if quote < altcoin_data.min_price as f64
                                 || quote > altcoin_data.max_price as f64

@@ -9,7 +9,7 @@ use axum::{
 };
 use axum_auto_routes::route;
 use futures::StreamExt;
-use mongodb::{bson::doc, options::FindOptions};
+use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 use std::sync::Arc;
