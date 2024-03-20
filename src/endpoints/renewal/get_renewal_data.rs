@@ -39,6 +39,7 @@ pub async fn handler(
     let mut document_to_return = None;
 
     if let Ok(Some(doc)) = result_auto_renew_flows {
+        println!("Found document in auto_renew_flows {:?}", doc);
         if doc.get_bool("enabled").unwrap_or(true) {
             // If enabled is true, return this document
             document_to_return = Some(doc);
@@ -50,6 +51,13 @@ pub async fn handler(
                 .flatten();
             document_to_return = result_altcoins.or(Some(doc)); // Use the altcoins result or fallback to the original document.
         }
+    } else {
+        let result_altcoins = find_renewal_data(&state, "auto_renew_flows_altcoins", &query)
+                .await
+                .ok()
+                .flatten();
+            // we return this document
+            document_to_return = result_altcoins;
     }
 
     let mut headers = HeaderMap::new();
