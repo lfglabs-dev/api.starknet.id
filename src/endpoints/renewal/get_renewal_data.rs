@@ -39,7 +39,6 @@ pub async fn handler(
     let mut document_to_return = None;
 
     if let Ok(Some(doc)) = result_auto_renew_flows {
-        println!("Found document in auto_renew_flows {:?}", doc);
         if doc.get_bool("enabled").unwrap_or(true) {
             // If enabled is true, return this document
             document_to_return = Some(doc);
