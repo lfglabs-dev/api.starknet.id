@@ -50,6 +50,13 @@ pub async fn handler(
                 .flatten();
             document_to_return = result_altcoins.or(Some(doc)); // Use the altcoins result or fallback to the original document.
         }
+    } else {
+        let result_altcoins = find_renewal_data(&state, "auto_renew_flows_altcoins", &query)
+                .await
+                .ok()
+                .flatten();
+            // we return this document
+            document_to_return = result_altcoins;
     }
 
     let mut headers = HeaderMap::new();
