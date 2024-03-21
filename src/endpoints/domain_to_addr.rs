@@ -68,34 +68,119 @@ pub async fn handler(
                 .starknetid_db
                 .collection::<mongodb::bson::Document>("domains");
 
-            let pipeline = vec![
-                doc! { "$match": { "_cursor.to": null, "domain": query.domain.clone() } },
-                doc! { "$lookup": {
-                    "from": "id_user_data",
-                    "let": { "userId": "$id" },
-                    "pipeline": [
-                        doc! { "$match": {
-                            "_cursor.to": { "$exists": false },
-                            "field": "0x000000000000000000000000000000000000000000000000737461726b6e6574",
-                            "$expr": { "$eq": ["$id", "$$userId"] }
-                        } }
-                    ],
-                    "as": "ownerData"
-                }},
-                doc! { "$unwind": { "path": "$ownerData", "preserveNullAndEmptyArrays": true } },
-                doc! { "$project": {
-                    "addr": {
-                        "$cond": {
-                            "if": { "$and": [
-                                { "$ne": [{ "$type": "$legacy_address" }, "0x0000000000000000000000000000000000000000000000000000000000000000"] },
-                                { "$ne": ["$legacy_address", "0x0000000000000000000000000000000000000000000000000000000000000000"] }
-                            ] },
-                            "then": "$legacy_address",
-                            "else": "$ownerData.data"
-                        }
-                    },
-                    "domain_expiry" : "$expiry"
-                }},
+            let pipeline = [
+                doc! {
+                    "$match": doc! {
+                        "_cursor.to": null,
+                        "domain": query.domain.clone()
+                    }
+                },
+                doc! {
+                    "$lookup": doc! {
+                        "from": "id_user_data",
+                        "let": doc! {
+                            "userId": "$id"
+                        },
+                        "pipeline": [
+                            doc! {
+                                "$match": doc! {
+                                    "_cursor.to": doc! {
+                                        "$exists": false
+                                    },
+                                    "field": "0x000000000000000000000000000000000000000000000000737461726b6e6574",
+                                    "$expr": doc! {
+                                        "$eq": [
+                                            "$id",
+                                            "$$userId"
+                                        ]
+                                    }
+                                }
+                            }
+                        ],
+                        "as": "userData"
+                    }
+                },
+                doc! {
+                    "$unwind": doc! {
+                        "path": "$userData",
+                        "preserveNullAndEmptyArrays": true
+                    }
+                },
+                doc! {
+                    "$lookup": doc! {
+                        "from": "id_owners",
+                        "let": doc! {
+                            "userId": "$id"
+                        },
+                        "pipeline": [
+                            doc! {
+                                "$match": doc! {
+                                    "$or": [
+                                        doc! {
+                                            "_cursor.to": doc! {
+                                                "$exists": false
+                                            }
+                                        },
+                                        doc! {
+                                            "_cursor.to": null
+                                        }
+                                    ],
+                                    "$expr": doc! {
+                                        "$eq": [
+                                            "$id",
+                                            "$$userId"
+                                        ]
+                                    }
+                                }
+                            }
+                        ],
+                        "as": "ownerData"
+                    }
+                },
+                doc! {
+                    "$unwind": doc! {
+                        "path": "$ownerData",
+                        "preserveNullAndEmptyArrays": true
+                    }
+                },
+                doc! {
+                    "$project": doc! {
+                        "addr": doc! {
+                            "$cond": doc! {
+                                "if": doc! {
+                                    "$and": [
+                                        doc! {
+                                            "$ifNull": [
+                                                "$legacy_address",
+                                                false
+                                            ]
+                                        },
+                                        doc! {
+                                            "$ne": [
+                                                "$legacy_address",
+                                                "0x0000000000000000000000000000000000000000000000000000000000000000"
+                                            ]
+                                        }
+                                    ]
+                                },
+                                "then": "$legacy_address",
+                                "else": doc! {
+                                    "$cond": doc! {
+                                        "if": doc! {
+                                            "$ifNull": [
+                                                "$userData.data",
+                                                false
+                                            ]
+                                        },
+                                        "then": "$userData.data",
+                                        "else": "$ownerData.owner"
+                                    }
+                                }
+                            }
+                        },
+                        "domain_expiry": "$expiry"
+                    }
+                },
             ];
 
             // Execute the aggregation pipeline
