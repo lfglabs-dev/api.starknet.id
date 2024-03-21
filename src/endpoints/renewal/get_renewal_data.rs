@@ -36,7 +36,7 @@ pub async fn handler(
 ) -> impl IntoResponse {
     let result_auto_renew_flows = find_renewal_data(&state, "auto_renew_flows", &query).await;
 
-    let mut document_to_return = None;
+    let document_to_return;
 
     if let Ok(Some(doc)) = result_auto_renew_flows {
         if doc.get_bool("enabled").unwrap_or(true) {
@@ -52,11 +52,11 @@ pub async fn handler(
         }
     } else {
         let result_altcoins = find_renewal_data(&state, "auto_renew_flows_altcoins", &query)
-                .await
-                .ok()
-                .flatten();
-            // we return this document
-            document_to_return = result_altcoins;
+            .await
+            .ok()
+            .flatten();
+        // we return this document
+        document_to_return = result_altcoins;
     }
 
     let mut headers = HeaderMap::new();
