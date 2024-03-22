@@ -36,35 +36,11 @@ pub async fn handler(
 ) -> impl IntoResponse {
     // Fetch data from both collections and combine the results
     let auto_renew_flows_future = find_renewal_data(&state, "auto_renew_flows", &query);
-    let auto_renew_flows_altcoins_future = find_renewal_data(&state, "auto_renew_flows_altcoins", &query);
+    let auto_renew_flows_altcoins_future =
+        find_renewal_data(&state, "auto_renew_flows_altcoins", &query);
 
-    let document_to_return;
-
-    if let Ok(Some(doc)) = result_auto_renew_flows {
-        if doc.get_bool("enabled").unwrap_or(true) {
-            // If enabled is true, return this document
-            document_to_return = Some(doc);
-        } else {
-            // If enabled is false, check auto_renew_flows_altcoins but keep this document as a fallback.
-            let result_altcoins = find_renewal_data(&state, "auto_renew_flows_altcoins", &query)
-                .await
-                .ok()
-                .flatten();
-            document_to_return = result_altcoins.or(Some(doc)); // Use the altcoins result or fallback to the original document.
-        }
-    } else {
-        let result_altcoins = find_renewal_data(&state, "auto_renew_flows_altcoins", &query)
-            .await
-            .ok()
-            .flatten();
-        // we return this document
-        document_to_return = result_altcoins;
-    }
-
-    let (auto_renew_flows, auto_renew_flows_altcoins) = futures::join!(
-        auto_renew_flows_future,
-        auto_renew_flows_altcoins_future
-    );
+    let (auto_renew_flows, auto_renew_flows_altcoins) =
+        futures::join!(auto_renew_flows_future, auto_renew_flows_altcoins_future);
 
     let mut combined_results = Vec::new();
 
