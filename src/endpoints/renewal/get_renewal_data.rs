@@ -36,12 +36,11 @@ pub async fn handler(
 ) -> impl IntoResponse {
     // Fetch data from both collections and combine the results
     let auto_renew_flows_future = find_renewal_data(&state, "auto_renew_flows", &query);
-    let auto_renew_flows_altcoins_future = find_renewal_data(&state, "auto_renew_flows_altcoins", &query);
+    let auto_renew_flows_altcoins_future =
+        find_renewal_data(&state, "auto_renew_flows_altcoins", &query);
 
-    let (auto_renew_flows, auto_renew_flows_altcoins) = futures::join!(
-        auto_renew_flows_future,
-        auto_renew_flows_altcoins_future
-    );
+    let (auto_renew_flows, auto_renew_flows_altcoins) =
+        futures::join!(auto_renew_flows_future, auto_renew_flows_altcoins_future);
 
     let mut combined_results = Vec::new();
 
