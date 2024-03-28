@@ -13,7 +13,7 @@ use mongodb::{bson::doc, options::AggregateOptions};
 use regex::Regex;
 use serde::Deserialize;
 use starknet::core::types::FieldElement;
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 #[derive(Deserialize)]
 pub struct StarknetIdQuery {
@@ -166,7 +166,7 @@ pub async fn handler(
         .await;
     match cursor {
         Ok(mut cursor) => {
-            let mut results: Vec<String> = Vec::new();
+            let mut domains_set: HashSet<String> = HashSet::new();
             while let Some(doc) = cursor.next().await {
                 if let Ok(doc) = doc {
                     let enabled = doc.get_bool("enabled").unwrap_or(false);
@@ -174,12 +174,13 @@ pub async fn handler(
                     if !enabled && !enabled_altcoin {
                         if let Ok(domain) = doc.get_str("domain") {
                             if DOMAIN_REGEX.is_match(domain) {
-                                results.push(domain.to_string());
+                                domains_set.insert(domain.to_string());
                             }
                         }
                     }
                 }
             }
+            let results: Vec<String> = domains_set.into_iter().collect(); // Convert HashSet back to Vec to match your function's expected return type
             (StatusCode::OK, Json(results)).into_response()
         }
         Err(_) => get_error("Error while fetching from database".to_string()),
