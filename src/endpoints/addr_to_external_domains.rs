@@ -42,7 +42,7 @@ pub async fn handler(
     let cursor = subdomains
         .find(
             doc! {
-                "field" : "starknet",
+                "field" : "0x000000000000000000000000000000000000000000000000737461726b6e6574", // starknet encoded
                 "value": to_hex(addr),
                 "_cursor.to": null,
             },
