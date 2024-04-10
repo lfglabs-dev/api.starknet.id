@@ -33,8 +33,7 @@ jobs:
             aws configure set default.region $AWS_DEFAULT_REGION
 
             # Setup Github Reading key
-            eval "$(ssh-agent -s)"
-            ssh-add ~/.ssh/github_read
+            GIT_SSH_COMMAND='ssh -i ~/.ssh/github_read' git clone git@github.com:starknet-id/api.starknet.id.git
 
             if [ -d "\$REPO_PATH/.git" ]; then
               echo "Repository exists, pulling changes..."
