@@ -70,9 +70,12 @@ pub async fn handler(
         }
 
         None => {
-            match (&state.conf).offchain_resolvers.get(&root_domain) {
+            match (
+                !prefix.is_empty(),
+                (&state.conf).offchain_resolvers.get(&root_domain),
+            ) {
                 // offchain resolver
-                Some(offchain_resolver) => {
+                (true, Some(offchain_resolver)) => {
                     // query offchain_resolver uri
                     let url = format!("{}{}", offchain_resolver.uri[0], query.domain.clone());
                     let client = reqwest::Client::new();
@@ -128,10 +131,7 @@ pub async fn handler(
                                         Err(e) => get_error(format!("{}", e)),
                                     }
                                 },
-                                Err(e) => get_error(format!(
-                                    "Failed to deserialize result from Starkscan API: {} for response: {}",
-                                    e, text
-                                )),
+                                Err(_) => get_error(text.to_string()),
                             },
                             Err(e) => get_error(format!(
                                 "Failed to get JSON response while fetching offchain resolver api: {}",
@@ -141,7 +141,7 @@ pub async fn handler(
                         Err(e) => get_error(format!("Failed to fetch offchain resolver api: {}", e)),
                     }
                 }
-                None => {
+                _ => {
                     // native resolver
                     let domains = state
                         .starknetid_db
