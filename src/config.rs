@@ -1,3 +1,4 @@
+use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
@@ -66,26 +67,49 @@ pub_struct!(Clone, Debug; Altcoins {
     data: HashMap<FieldElement, AltcoinData>,
 });
 
+pub_struct!(Clone, Debug, Deserialize; Rpc {
+    url: String,
+});
+
+#[derive(Deserialize)]
+struct TempOffchainResolver {
+    root_domain: String,
+    resolver_address: String,
+    uri: Vec<String>,
+}
+
+pub_struct!(Clone, Debug, Deserialize; OffchainResolver {
+    resolver_address: String,
+    uri: Vec<String>,
+});
+
+#[derive(Debug, Clone)]
+pub struct OffchainResolvers(HashMap<String, OffchainResolver>);
+
 #[derive(Deserialize)]
 struct RawConfig {
     server: Server,
     databases: Databases,
+    rpc: Rpc,
     contracts: Contracts,
     starkscan: Starkscan,
     custom_resolvers: HashMap<String, Vec<String>>,
     solana: Solana,
     altcoins: Altcoins,
+    offchain_resolvers: OffchainResolvers,
 }
 
 pub_struct!(Clone, Deserialize; Config {
     server: Server,
     databases: Databases,
+    rpc: Rpc,
     contracts: Contracts,
     starkscan: Starkscan,
     custom_resolvers: HashMap<String, Vec<String>>,
     reversed_resolvers: HashMap<String, String>,
     solana: Solana,
     altcoins: Altcoins,
+    offchain_resolvers: OffchainResolvers,
 });
 
 impl Altcoins {
@@ -123,6 +147,48 @@ impl<'de> Deserialize<'de> for Altcoins {
     }
 }
 
+impl OffchainResolvers {
+    pub fn get(&self, key: &str) -> Option<&OffchainResolver> {
+        self.0.get(key)
+    }
+}
+
+impl<'de> Deserialize<'de> for OffchainResolvers {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct OffchainResolversVisitor;
+
+        impl<'de> Visitor<'de> for OffchainResolversVisitor {
+            type Value = OffchainResolvers;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a map of resolver addresses to OffchainResolvers")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<OffchainResolvers, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut hash_map = HashMap::new();
+                while let Some((_, temp_resolver)) =
+                    map.next_entry::<String, TempOffchainResolver>()?
+                {
+                    let resolver = OffchainResolver {
+                        resolver_address: temp_resolver.resolver_address,
+                        uri: temp_resolver.uri,
+                    };
+                    hash_map.insert(temp_resolver.root_domain, resolver);
+                }
+                Ok(OffchainResolvers(hash_map))
+            }
+        }
+
+        deserializer.deserialize_map(OffchainResolversVisitor)
+    }
+}
+
 impl From<RawConfig> for Config {
     fn from(raw: RawConfig) -> Self {
         let mut reversed_resolvers = HashMap::new();
@@ -134,12 +200,14 @@ impl From<RawConfig> for Config {
         Config {
             server: raw.server,
             databases: raw.databases,
+            rpc: raw.rpc,
             contracts: raw.contracts,
             starkscan: raw.starkscan,
             custom_resolvers: raw.custom_resolvers,
             reversed_resolvers,
             solana: raw.solana,
             altcoins: raw.altcoins,
+            offchain_resolvers: raw.offchain_resolvers,
         }
     }
 }

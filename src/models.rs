@@ -146,3 +146,11 @@ pub struct State {
 pub struct States {
     pub states: HashMap<String, State>,
 }
+
+#[derive(Deserialize, Debug)]
+pub struct OffchainResolverHint {
+    pub address: FieldElement,
+    pub r: FieldElement,
+    pub s: FieldElement,
+    pub max_validity: u64,
+}
