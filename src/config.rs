@@ -67,8 +67,9 @@ pub_struct!(Clone, Debug; Altcoins {
     data: HashMap<FieldElement, AltcoinData>,
 });
 
-pub_struct!(Clone, Debug, Deserialize; Rpc {
-    url: String,
+pub_struct!(Clone, Debug, Deserialize; Variables {
+    rpc_url: String,
+    refresh_delay: f64,
 });
 
 #[derive(Deserialize)]
@@ -90,7 +91,7 @@ pub struct OffchainResolvers(HashMap<String, OffchainResolver>);
 struct RawConfig {
     server: Server,
     databases: Databases,
-    rpc: Rpc,
+    variables: Variables,
     contracts: Contracts,
     starkscan: Starkscan,
     custom_resolvers: HashMap<String, Vec<String>>,
@@ -102,7 +103,7 @@ struct RawConfig {
 pub_struct!(Clone, Deserialize; Config {
     server: Server,
     databases: Databases,
-    rpc: Rpc,
+    variables: Variables,
     contracts: Contracts,
     starkscan: Starkscan,
     custom_resolvers: HashMap<String, Vec<String>>,
@@ -200,7 +201,7 @@ impl From<RawConfig> for Config {
         Config {
             server: raw.server,
             databases: raw.databases,
-            rpc: raw.rpc,
+            variables: raw.variables,
             contracts: raw.contracts,
             starkscan: raw.starkscan,
             custom_resolvers: raw.custom_resolvers,

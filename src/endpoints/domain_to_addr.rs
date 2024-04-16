@@ -1,5 +1,7 @@
 use crate::{
     models::{AppState, OffchainResolverHint},
+    resolving::is_offchain_resolver,
+    root,
     utils::{extract_prefix_and_root, get_error, to_hex},
 };
 use axum::{
@@ -70,12 +72,9 @@ pub async fn handler(
         }
 
         None => {
-            match (
-                !prefix.is_empty(),
-                (&state.conf).offchain_resolvers.get(&root_domain),
-            ) {
+            match is_offchain_resolver(prefix, root_domain, &state) {
                 // offchain resolver
-                (true, Some(offchain_resolver)) => {
+                Some(offchain_resolver) => {
                     // query offchain_resolver uri
                     let url = format!("{}{}", offchain_resolver.uri[0], query.domain.clone());
                     let client = reqwest::Client::new();
@@ -90,7 +89,7 @@ pub async fn handler(
                                 Ok(hints) => {
                                     // Call the naming contract with the hints
                                     let provider = JsonRpcClient::new(HttpTransport::new(
-                                        Url::parse(&state.conf.rpc.url).unwrap(),
+                                        Url::parse(&state.conf.variables.rpc_url).unwrap(),
                                     ));
                                     //encode domain
                                     let trimmed_domain = query.domain.strip_suffix(".stark").unwrap_or(&query.domain);
@@ -141,7 +140,7 @@ pub async fn handler(
                         Err(e) => get_error(format!("Failed to fetch offchain resolver api: {}", e)),
                     }
                 }
-                _ => {
+                None => {
                     // native resolver
                     let domains = state
                         .starknetid_db

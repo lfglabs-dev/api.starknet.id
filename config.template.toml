@@ -17,8 +17,9 @@ old_verifier = "0xXXXXXXXXXXXX"
 pop_verifier = "0xXXXXXXXXXXXX"
 pp_verifier = "0xXXXXXXXXXXXX"
 
-[rpc]
-url = "xxxxxx"
+[variables]
+rpc_url = "xxxxxx"
+refresh_delay = 60 # in seconds
 
 [starkscan]
 api_url = "https://api-testnet.starkscan.co/api/v0"
