@@ -1,7 +1,13 @@
+use std::sync::Arc;
+
+use futures::StreamExt;
 use mongodb::{
-    bson::{doc, Document},
+    bson::{doc, Bson, Document},
+    options::AggregateOptions,
     Collection,
 };
+
+use crate::{config::OffchainResolver, models::AppState, utils::clean_string};
 
 pub async fn get_custom_resolver(domains: &Collection<Document>, domain: &str) -> Option<String> {
     // Split the domain into parts
@@ -47,4 +53,144 @@ pub async fn get_custom_resolver(domains: &Collection<Document>, domain: &str) -
 
     // If no custom resolver found
     None
+}
+
+pub async fn update_offchain_resolvers(state: &Arc<AppState>) {
+    let offchain_resolvers = state
+        .starknetid_db
+        .collection::<mongodb::bson::Document>("offchain_resolvers");
+
+    let pipeline = [
+        doc! {
+            "$match": doc! {
+                "_cursor.to": Bson::Null,
+                "active": true
+            }
+        },
+        doc! {
+            "$lookup": doc! {
+                "from": "domains",
+                "let": doc! {
+                    "local_resolver_contract": "$resolver_contract"
+                },
+                "pipeline": [
+                    doc! {
+                        "$match": doc! {
+                            "$expr": doc! {
+                                "$eq": [
+                                    "$resolver",
+                                    "$$local_resolver_contract"
+                                ]
+                            },
+                            "_cursor.to": Bson::Null,
+                        }
+                    }
+                ],
+                "as": "domainData"
+            }
+        },
+        doc! {
+            "$project": doc! {
+                "_id": 0,
+                "resolver_contract": "$resolver_contract",
+                "uri": "$uri",
+                "active": "$active",
+                "domains": "$domainData.domain",
+            }
+        },
+    ];
+    let aggregate_options = AggregateOptions::default();
+    let cursor = offchain_resolvers
+        .aggregate(pipeline, aggregate_options)
+        .await;
+    match cursor {
+        Ok(mut cursor) => {
+            while let Some(doc) = cursor.next().await {
+                if let Ok(doc) = doc {
+                    let domains = doc.get_array("domains");
+                    let domains = match domains {
+                        Ok(domains) => domains,
+                        Err(err) => {
+                            println!("Error while getting array of domains: {}", err);
+                            continue;
+                        }
+                    };
+                    if domains.is_empty() {
+                        continue;
+                    }
+                    for domain in domains {
+                        let domain = match domain {
+                            Bson::String(domain) => domain,
+                            _ => {
+                                println!("Error while getting domain: {:?}", domain);
+                                continue;
+                            }
+                        };
+                        // values in config file override onchain events
+                        match (&state.conf).offchain_resolvers.get(domain) {
+                            Some(_) => continue,
+                            None => {
+                                let mut resolver_map =
+                                    state.dynamic_offchain_resolvers.lock().unwrap();
+                                match resolver_map.get(domain) {
+                                    Some(existing_resolvers) => {
+                                        // there is already a resolver for this domain
+                                        let new_uri =
+                                            clean_string(doc.get_str("uri").unwrap_or_default());
+                                        // we check the uri is not already in the list
+                                        if !existing_resolvers.uri.contains(&new_uri) {
+                                            if let Some(existing_resolver) =
+                                                resolver_map.get_mut(domain)
+                                            {
+                                                existing_resolver.uri.push(new_uri);
+                                            }
+                                        }
+                                    }
+                                    None => {
+                                        // there is no resolver for this domain yet
+                                        let resolver = OffchainResolver {
+                                            resolver_address: doc
+                                                .get_str("resolver_contract")
+                                                .unwrap_or_default()
+                                                .to_owned(),
+                                            uri: vec![clean_string(
+                                                doc.get_str("uri").unwrap_or_default(),
+                                            )],
+                                        };
+                                        resolver_map.insert(domain.to_owned(), resolver);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Err(err) => {
+            println!("Error while building offchain_resolver hashmap from collection offchain_resolvers: {}", err);
+        }
+    }
+}
+
+pub fn get_offchain_resolver(
+    prefix: String,
+    root_domain: String,
+    state: &Arc<AppState>,
+) -> Option<OffchainResolver> {
+    if prefix.is_empty() {
+        return None;
+    }
+    state
+        .conf
+        .offchain_resolvers
+        .get(&root_domain)
+        .cloned()
+        .or_else(|| {
+            state
+                .dynamic_offchain_resolvers
+                .lock()
+                .unwrap()
+                .get(&root_domain)
+                .cloned()
+        })
 }

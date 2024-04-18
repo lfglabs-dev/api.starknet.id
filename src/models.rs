@@ -4,15 +4,22 @@ use mongodb::{
 };
 use starknet::core::types::FieldElement;
 
-use crate::{config::Config, utils::to_hex};
+use crate::{
+    config::{Config, OffchainResolver},
+    utils::to_hex,
+};
 use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 pub struct AppState {
     pub conf: Config,
     pub starknetid_db: Database,
     pub sales_db: Database,
     pub states: States,
+    pub dynamic_offchain_resolvers: Arc<Mutex<HashMap<String, OffchainResolver>>>,
 }
 
 fn serialize_felt<S>(field_element: &FieldElement, serializer: S) -> Result<S::Ok, S::Error>
@@ -145,4 +152,12 @@ pub struct State {
 #[derive(Deserialize, Debug)]
 pub struct States {
     pub states: HashMap<String, State>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct OffchainResolverHint {
+    pub address: FieldElement,
+    pub r: FieldElement,
+    pub s: FieldElement,
+    pub max_validity: u64,
 }

@@ -17,6 +17,10 @@ old_verifier = "0xXXXXXXXXXXXX"
 pop_verifier = "0xXXXXXXXXXXXX"
 pp_verifier = "0xXXXXXXXXXXXX"
 
+[variables]
+rpc_url = "xxxxxx"
+refresh_delay = 60 # in seconds
+
 [starkscan]
 api_url = "https://api-testnet.starkscan.co/api/v0"
 api_key = "xxxxxx"
@@ -60,3 +64,12 @@ min_price = 2000
 max_price = 10000
 decimals = 18
 max_quote_validity = 600
+
+[offchain_resolvers]
+
+[offchain_resolvers.NOTION]
+root_domain = "notion.stark"
+resolver_address = "0x153be68cf8fc71138610811dd2b4fa481eb99f3eedcb3fce7369569055be275"
+uri = [
+    "https://sepolia.api.ccip-demo.starknet.id/resolve?domain=",
+]

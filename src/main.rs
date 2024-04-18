@@ -9,11 +9,15 @@ mod utils;
 use axum::{http::StatusCode, Router};
 use axum_auto_routes::route;
 use mongodb::{bson::doc, options::ClientOptions, Client};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::{net::SocketAddr, sync::Mutex};
+use tokio::time::{sleep, Duration};
 use utils::WithState;
 
 use tower_http::cors::{Any, CorsLayer};
+
+use crate::resolving::update_offchain_resolvers;
 
 lazy_static::lazy_static! {
     pub static ref ROUTE_REGISTRY: Mutex<Vec<Box<dyn WithState>>> = Mutex::new(Vec::new());
@@ -48,6 +52,7 @@ async fn main() {
             .unwrap()
             .database(&conf.databases.sales.name),
         states,
+        dynamic_offchain_resolvers: Arc::new(Mutex::new(HashMap::new())),
     });
     // we will know by looking at the log number which db has an issue
     for db in [&shared_state.starknetid_db, &shared_state.sales_db] {
@@ -58,6 +63,18 @@ async fn main() {
             println!("database: connected")
         }
     }
+
+    // refresh offchain resolvers from indexed data
+    let refresh_state = shared_state.clone();
+    tokio::spawn(async move {
+        loop {
+            update_offchain_resolvers(&refresh_state).await;
+            sleep(Duration::from_millis(
+                (conf.variables.refresh_delay * 1000.0) as u64,
+            ))
+            .await;
+        }
+    });
 
     let cors = CorsLayer::new().allow_headers(Any).allow_origin(Any);
     let app = ROUTE_REGISTRY

@@ -107,6 +107,10 @@ pub async fn fetch_img_url(
         .and_then(|v| v.as_str().map(ToString::to_string))
 }
 
+pub fn clean_string(input: &str) -> String {
+    input.chars().filter(|&c| c != '\0').collect()
+}
+
 // required for axum_auto_routes
 pub trait WithState: Send {
     fn to_router(self: Box<Self>, shared_state: Arc<AppState>) -> Router;
