@@ -63,7 +63,8 @@ pub async fn update_offchain_resolvers(state: &Arc<AppState>) {
     let pipeline = [
         doc! {
             "$match": doc! {
-                "_cursor.to": Bson::Null
+                "_cursor.to": Bson::Null,
+                "active": true
             }
         },
         doc! {
@@ -81,7 +82,7 @@ pub async fn update_offchain_resolvers(state: &Arc<AppState>) {
                                     "$$local_resolver_contract"
                                 ]
                             },
-                            "_cursor.to": Bson::Null
+                            "_cursor.to": Bson::Null,
                         }
                     }
                 ],
@@ -89,17 +90,12 @@ pub async fn update_offchain_resolvers(state: &Arc<AppState>) {
             }
         },
         doc! {
-            "$unwind": doc! {
-                "path": "$domainData",
-                "preserveNullAndEmptyArrays": true
-            }
-        },
-        doc! {
             "$project": doc! {
                 "_id": 0,
                 "resolver_contract": "$resolver_contract",
                 "uri": "$uri",
-                "domain": "$domainData.domain",
+                "active": "$active",
+                "domains": "$domainData.domain",
             }
         },
     ];
@@ -111,26 +107,60 @@ pub async fn update_offchain_resolvers(state: &Arc<AppState>) {
         Ok(mut cursor) => {
             while let Some(doc) = cursor.next().await {
                 if let Ok(doc) = doc {
-                    let domain = doc.get_str("domain").unwrap_or_default();
-                    if domain.is_empty() {
+                    let domains = doc.get_array("domains");
+                    let domains = match domains {
+                        Ok(domains) => domains,
+                        Err(err) => {
+                            println!("Error while getting array of domains: {}", err);
+                            continue;
+                        }
+                    };
+                    if domains.is_empty() {
                         continue;
                     }
-                    // values in config file override onchain events
-                    match (&state.conf).offchain_resolvers.get(domain) {
-                        Some(_) => continue,
-                        None => {
-                            let resolver = OffchainResolver {
-                                resolver_address: doc
-                                    .get_str("resolver_contract")
-                                    .unwrap_or_default()
-                                    .to_owned(),
-                                uri: vec![clean_string(doc.get_str("uri").unwrap_or_default())],
-                            };
-                            state
-                                .dynamic_offchain_resolvers
-                                .lock()
-                                .unwrap()
-                                .insert(domain.to_owned(), resolver);
+                    for domain in domains {
+                        let domain = match domain {
+                            Bson::String(domain) => domain,
+                            _ => {
+                                println!("Error while getting domain: {:?}", domain);
+                                continue;
+                            }
+                        };
+                        // values in config file override onchain events
+                        match (&state.conf).offchain_resolvers.get(domain) {
+                            Some(_) => continue,
+                            None => {
+                                let mut resolver_map =
+                                    state.dynamic_offchain_resolvers.lock().unwrap();
+                                match resolver_map.get(domain) {
+                                    Some(existing_resolvers) => {
+                                        // there is already a resolver for this domain
+                                        let new_uri =
+                                            clean_string(doc.get_str("uri").unwrap_or_default());
+                                        // we check the uri is not already in the list
+                                        if !existing_resolvers.uri.contains(&new_uri) {
+                                            if let Some(existing_resolver) =
+                                                resolver_map.get_mut(domain)
+                                            {
+                                                existing_resolver.uri.push(new_uri);
+                                            }
+                                        }
+                                    }
+                                    None => {
+                                        // there is no resolver for this domain yet
+                                        let resolver = OffchainResolver {
+                                            resolver_address: doc
+                                                .get_str("resolver_contract")
+                                                .unwrap_or_default()
+                                                .to_owned(),
+                                            uri: vec![clean_string(
+                                                doc.get_str("uri").unwrap_or_default(),
+                                            )],
+                                        };
+                                        resolver_map.insert(domain.to_owned(), resolver);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -142,7 +172,7 @@ pub async fn update_offchain_resolvers(state: &Arc<AppState>) {
     }
 }
 
-pub fn is_offchain_resolver(
+pub fn get_offchain_resolver(
     prefix: String,
     root_domain: String,
     state: &Arc<AppState>,

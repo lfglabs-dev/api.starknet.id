@@ -1,7 +1,6 @@
 use crate::{
     models::{AppState, OffchainResolverHint},
-    resolving::is_offchain_resolver,
-    root,
+    resolving::get_offchain_resolver,
     utils::{extract_prefix_and_root, get_error, to_hex},
 };
 use axum::{
@@ -72,7 +71,7 @@ pub async fn handler(
         }
 
         None => {
-            match is_offchain_resolver(prefix, root_domain, &state) {
+            match get_offchain_resolver(prefix, root_domain, &state) {
                 // offchain resolver
                 Some(offchain_resolver) => {
                     // query offchain_resolver uri
