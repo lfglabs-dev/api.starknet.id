@@ -52,7 +52,8 @@ pub async fn handler(
                     doc! {
                         "domain_slice" : prefix,
                         "resolver" : resolver,
-                        "field" : "starknet",
+                        // means "starknet"
+                        "field" : "0x000000000000000000000000000000000000000000000000737461726b6e6574",
                         "_cursor.to": null,
                     },
                     None,
