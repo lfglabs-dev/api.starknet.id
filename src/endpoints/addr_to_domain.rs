@@ -322,7 +322,7 @@ fn create_main_id_pipeline(address: &String) -> Vec<Document> {
             "let": { "id": "$id" },
             "pipeline": [
                 doc! { "$match": {
-                    "_cursor.to": { "$exists": false },
+                    "_cursor.to": null,
                     "$expr": { "$eq": ["$id", "$$id"] }
                 } }
             ],
