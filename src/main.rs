@@ -57,7 +57,7 @@ async fn main() {
     // we will know by looking at the log number which db has an issue
     for db in [&shared_state.starknetid_db, &shared_state.sales_db] {
         if db.run_command(doc! {"ping": 1}, None).await.is_err() {
-            println!("error: unable to connect to a database {:?}", db);
+            println!("error: unable to connect to a database");
             return;
         } else {
             println!("database: connected")
