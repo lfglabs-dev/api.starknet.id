@@ -84,6 +84,10 @@ pub_struct!(Clone, Debug, Deserialize; OffchainResolver {
     uri: Vec<String>,
 });
 
+pub_struct!(Clone, Debug, Deserialize; Evm {
+    private_key: String,
+});
+
 #[derive(Debug, Clone)]
 pub struct OffchainResolvers(HashMap<String, OffchainResolver>);
 
@@ -98,6 +102,8 @@ struct RawConfig {
     solana: Solana,
     altcoins: Altcoins,
     offchain_resolvers: OffchainResolvers,
+    evm: Evm,
+    evm_resolvers: HashMap<String, String>,
 }
 
 pub_struct!(Clone, Deserialize; Config {
@@ -111,6 +117,9 @@ pub_struct!(Clone, Deserialize; Config {
     solana: Solana,
     altcoins: Altcoins,
     offchain_resolvers: OffchainResolvers,
+    evm: Evm,
+    evm_resolvers: HashMap<String, String>,
+    reversed_evm_resolvers: HashMap<String, String>,
 });
 
 impl Altcoins {
@@ -198,6 +207,11 @@ impl From<RawConfig> for Config {
                 reversed_resolvers.insert(value.clone(), key.clone());
             }
         }
+        let mut reversed_evm_resolvers = HashMap::new();
+        for (key, value) in &raw.evm_resolvers {
+            reversed_evm_resolvers.insert(value.clone(), key.clone());
+        }
+
         Config {
             server: raw.server,
             databases: raw.databases,
@@ -209,6 +223,9 @@ impl From<RawConfig> for Config {
             solana: raw.solana,
             altcoins: raw.altcoins,
             offchain_resolvers: raw.offchain_resolvers,
+            evm: raw.evm,
+            evm_resolvers: raw.evm_resolvers,
+            reversed_evm_resolvers,
         }
     }
 }
