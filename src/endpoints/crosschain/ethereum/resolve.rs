@@ -5,10 +5,19 @@ use crate::{
     models::AppState,
     utils::get_error,
 };
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{
+    async_trait,
+    body::Body,
+    extract::{FromRequest, State},
+    http::{Request, StatusCode},
+    response::{IntoResponse, Response},
+    Json,
+};
 use axum_auto_routes::route;
+use bytes::{BufMut, BytesMut};
 use ethabi::Token;
 use ethers::{signers::LocalWallet, types::H160, utils::keccak256};
+use futures::{pin_mut, stream::StreamExt as _};
 use mongodb::bson::doc;
 use reqwest::Url;
 use serde::Deserialize;
@@ -29,17 +38,65 @@ pub struct ResolveQuery {
     sender: String, // resolver contract address
 }
 
+pub enum Query {
+    Json(ResolveQuery),
+    Form(ResolveQuery),
+}
+
+pub struct CustomRejection(String);
+
+impl IntoResponse for CustomRejection {
+    fn into_response(self) -> Response {
+        (StatusCode::BAD_REQUEST, self.0).into_response()
+    }
+}
+
+#[async_trait]
+impl<S> FromRequest<S, Body> for Query
+where
+    S: Send + Sync + 'static,
+{
+    type Rejection = CustomRejection;
+
+    async fn from_request(req: Request<Body>, _state: &S) -> Result<Self, Self::Rejection> {
+        let body = req.into_body();
+        pin_mut!(body); // Pin the body stream to the stack
+
+        let mut bytes = BytesMut::new();
+
+        // Collecting data chunks from the body stream
+        while let Some(chunk) = body.next().await {
+            let chunk =
+                chunk.map_err(|_| CustomRejection("Failed to read request body".to_string()))?;
+            bytes.put(chunk);
+        }
+
+        let full_body = bytes.freeze(); // Convert collected data into Bytes
+
+        // Attempt to parse as JSON
+        if let Ok(json_data) = serde_json::from_slice::<ResolveQuery>(&full_body) {
+            return Ok(Query::Json(json_data));
+        }
+
+        // Attempt to parse as Form data
+        if let Ok(form_data) = serde_urlencoded::from_bytes::<ResolveQuery>(&full_body) {
+            return Ok(Query::Form(form_data));
+        }
+
+        Err(CustomRejection("Unsupported Content Type".to_string()))
+    }
+}
+
 #[route(
     post,
     "/crosschain/ethereum/resolve",
     crate::endpoints::crosschain::ethereum::resolve
 )]
-pub async fn handler(
-    State(state): State<Arc<AppState>>,
-    Json(query): Json<ResolveQuery>,
-) -> impl IntoResponse {
-    let encoded_data: String = query.data;
-    let sender = query.sender.to_lowercase();
+pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl IntoResponse {
+    let (encoded_data, sender) = match query {
+        Query::Json(data) => (data.data, data.sender.to_lowercase()),
+        Query::Form(data) => (data.data, data.sender.to_lowercase()),
+    };
 
     match decode_data(&encoded_data) {
         Ok(name) => {
@@ -132,7 +189,6 @@ pub async fn handler(
                                         data,
                                     ) {
                                         Ok(res) => {
-                                            println!("Signed message: {}", res);
                                             return (
                                                 StatusCode::OK,
                                                 Json(json!({
