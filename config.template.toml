@@ -73,3 +73,9 @@ resolver_address = "0x153be68cf8fc71138610811dd2b4fa481eb99f3eedcb3fce7369569055
 uri = [
     "https://sepolia.api.ccip-demo.starknet.id/resolve?domain=",
 ]
+
+[evm]
+private_key = "0xXXXXXXXXXXXX"
+
+[evm_resolvers]
+ethereum = "0x66360d1fA24f9244cA5850798B043711C2c64FFa"
