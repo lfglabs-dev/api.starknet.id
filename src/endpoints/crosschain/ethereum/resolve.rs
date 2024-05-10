@@ -118,7 +118,6 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
 
     match decode_data(&encoded_data) {
         Ok((name, resolver_function_call)) => {
-            println!("resolver_function_call: {:?}", resolver_function_call);
             let parts: Vec<&str> = name.split('.').collect();
             let root_domain = if parts.len() > 2 {
                 &parts[..parts.len() - 2]
@@ -155,7 +154,6 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
 
                     let payload: Vec<Token> = match resolver_function_call {
                         ResolverFunctionCall::Text(_alt_hash, record) => {
-                            println!("Text record: {:?}", record);
                             match record.as_str() {
                                 // Records available "com.discord" "com.github" "com.twitter"
                                 "url" => {

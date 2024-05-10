@@ -16,6 +16,7 @@ verifier = "0xXXXXXXXXXXXX"
 old_verifier = "0xXXXXXXXXXXXX"
 pop_verifier = "0xXXXXXXXXXXXX"
 pp_verifier = "0xXXXXXXXXXXXX"
+argent_multicall = "0xXXXXXXXXXXXX"
 
 [variables]
 rpc_url = "xxxxxx"
@@ -76,6 +77,3 @@ uri = [
 
 [evm]
 private_key = "0xXXXXXXXXXXXX"
-
-[evm_resolvers]
-ethereum = "0x66360d1fA24f9244cA5850798B043711C2c64FFa"
