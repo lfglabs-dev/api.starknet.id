@@ -1,6 +1,7 @@
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use starknet::core::types::FieldElement;
+use starknet::core::utils::cairo_short_string_to_felt;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -71,6 +72,7 @@ pub_struct!(Clone, Debug; Altcoins {
 pub_struct!(Clone, Debug, Deserialize; Variables {
     rpc_url: String,
     refresh_delay: f64,
+    ipfs_gateway: String,
 });
 
 #[derive(Deserialize)]
@@ -104,6 +106,7 @@ struct RawConfig {
     altcoins: Altcoins,
     offchain_resolvers: OffchainResolvers,
     evm: Evm,
+    evm_networks: HashMap<String, u64>,
 }
 
 pub_struct!(Clone, Deserialize; Config {
@@ -118,6 +121,7 @@ pub_struct!(Clone, Deserialize; Config {
     altcoins: Altcoins,
     offchain_resolvers: OffchainResolvers,
     evm: Evm,
+    evm_networks: HashMap<u64, FieldElement>,
 });
 
 impl Altcoins {
@@ -206,6 +210,12 @@ impl From<RawConfig> for Config {
             }
         }
 
+        let mut reversed_evm_networks = HashMap::new();
+        for (key, value) in &raw.evm_networks {
+            let chain_name = cairo_short_string_to_felt(&key.clone()).unwrap();
+            reversed_evm_networks.insert(*value, chain_name);
+        }
+
         Config {
             server: raw.server,
             databases: raw.databases,
@@ -218,6 +228,7 @@ impl From<RawConfig> for Config {
             altcoins: raw.altcoins,
             offchain_resolvers: raw.offchain_resolvers,
             evm: raw.evm,
+            evm_networks: reversed_evm_networks,
         }
     }
 }

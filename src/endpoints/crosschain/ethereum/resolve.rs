@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{str::FromStr, sync::Arc};
 
 use crate::{
     endpoints::crosschain::ethereum::{
@@ -93,14 +93,6 @@ where
 }
 
 lazy_static! {
-    static ref NETWORK_NAMES: HashMap<u64, FieldElement> = {
-        let mut map = HashMap::new();
-        map.insert(2147483785, short_string!("polygon"));
-        map.insert(2147483658, short_string!("optimism"));
-        map.insert(2147492101, short_string!("base"));
-        map.insert(2147525809, short_string!("arbitrum"));
-        map
-    };
     static ref EVM_ADDRESS: FieldElement = short_string!("evm-address");
     static ref ETHEREUM: FieldElement = short_string!("ethereum");
 }
@@ -158,6 +150,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                 // Records available "com.discord" "com.github" "com.twitter"
                                 "url" => {
                                     match get_profile_picture(
+                                        &state.conf,
                                         &provider,
                                         state.starknetid_db.collection::<mongodb::bson::Document>(
                                             "id_verifier_data",
@@ -168,10 +161,12 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                     .await
                                     {
                                         Some(pfp) => vec![Token::String(pfp)],
-                                        None => return get_error(
+                                        None => {
+                                            return get_error(
                                                 "No profile picture specified for this domain"
                                                     .to_string(),
                                             )
+                                        }
                                     }
                                 }
                                 _ => {
@@ -219,9 +214,8 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                     }
                                 } else {
                                     // evm chain
-                                    match NETWORK_NAMES.get(&chain) {
+                                    match state.conf.evm_networks.get(&chain) {
                                         Some(field_name) => {
-                                            println!("Chain: {:?}", name);
                                             match get_user_data_multicall(
                                                 &provider,
                                                 &state.conf,

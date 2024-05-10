@@ -9,7 +9,7 @@ use ethers::{
 use futures::StreamExt;
 use lazy_static::lazy_static;
 use mongodb::{
-    bson::{doc, Bson, Document},
+    bson::{doc, from_document, Document},
     Collection,
 };
 use starknet::{
@@ -24,6 +24,7 @@ use std::fmt::Write;
 
 use crate::{
     config::Config,
+    endpoints::uri::VerifierData,
     utils::{fetch_image_url, parse_base64_image, to_hex},
 };
 
@@ -261,6 +262,7 @@ pub async fn domain_to_address(
 
 // Profile picture metadata utils
 pub async fn get_profile_picture(
+    config: &Config,
     provider: &JsonRpcClient<HttpTransport>,
     verifier_data_collection: Collection<Document>,
     pfp_verifier: FieldElement,
@@ -277,19 +279,16 @@ pub async fn get_profile_picture(
         Ok(mut cursor) => {
             let mut contract_addr: String = String::new();
             let mut token_id: (String, String) = (String::new(), String::new());
-            while let Some(doc) = cursor.next().await {
-                if let Ok(doc) = doc {
-                    let field = &doc.get_str("field").unwrap_or_default().to_owned();
-                    if *field == *NFT_PP_CONTRACT {
-                        contract_addr = doc.get_str("data").unwrap_or_default().to_owned();
-                    } else if *field == *NFT_PP_ID {
-                        if let Ok(extended_data) = doc.get_array("extended_data") {
-                            if let (Some(Bson::String(first)), Some(Bson::String(second))) =
-                                (extended_data.get(0), extended_data.get(1))
-                            {
-                                token_id = (first.clone(), second.clone());
-                            } else {
-                                println!("Error: extended_data array does not contain two strings");
+            while let Some(result) = cursor.next().await {
+                if let Ok(doc) = result {
+                    if let Ok(verifier_data) = from_document::<VerifierData>(doc) {
+                        if *verifier_data.field == *NFT_PP_CONTRACT {
+                            if let Some(addr) = verifier_data.data {
+                                contract_addr = addr;
+                            }
+                        } else if *verifier_data.field == *NFT_PP_ID {
+                            if let Some(token_id_arr) = verifier_data.extended_data {
+                                token_id = (token_id_arr[0].clone(), token_id_arr[1].clone());
                             }
                         } else {
                             println!("Error: failed to get 'extended_data' as array");
@@ -323,7 +322,13 @@ pub async fn get_profile_picture(
                         .filter_map(|val| parse_cairo_short_string(val).ok())
                         .collect::<Vec<String>>() // Collect into a vector of strings
                         .join("");
-                    match get_profile_picture_uri(Some(&pfp_metadata), true, &id.to_string()).await
+                    match get_profile_picture_uri(
+                        config,
+                        Some(&pfp_metadata),
+                        true,
+                        &id.to_string(),
+                    )
+                    .await
                     {
                         Some(pfp) => {
                             println!("Profile picture fetched successfully {}", pfp);
@@ -349,13 +354,14 @@ pub async fn get_profile_picture(
 }
 
 pub async fn get_profile_picture_uri(
+    config: &Config,
     uri: Option<&str>,
     use_default_pfp: bool,
     id: &str,
 ) -> Option<String> {
     match uri {
         Some(u) if u.contains("base64") => Some(parse_base64_image(u)),
-        Some(u) => Some(fetch_image_url(u).await),
+        Some(u) => Some(fetch_image_url(config, u).await),
         None if use_default_pfp => Some(format!("https://starknet.id/api/identicons/{}", id)),
         _ => None,
     }

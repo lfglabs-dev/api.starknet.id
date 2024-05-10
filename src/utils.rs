@@ -11,7 +11,7 @@ use serde_json::Value;
 use starknet::core::types::FieldElement;
 use std::{fmt::Write, str, sync::Arc};
 
-use crate::models::AppState;
+use crate::{config::Config, models::AppState};
 
 #[derive(Serialize)]
 pub struct ErrorMessage {
@@ -148,19 +148,19 @@ pub fn parse_base64_image(metadata: &str) -> String {
     v["image"].as_str().unwrap_or("").to_string()
 }
 
-fn parse_image_url(url: &str) -> String {
+fn parse_image_url(config: &Config, url: &str) -> String {
     if url.starts_with("ipfs://") {
-        url.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/")
+        url.replace("ipfs://", config.variables.ipfs_gateway.as_str())
     } else {
         url.to_string()
     }
 }
 
-pub async fn fetch_image_url(url: &str) -> String {
-    let parsed_url = parse_image_url(url);
+pub async fn fetch_image_url(config: &Config, url: &str) -> String {
+    let parsed_url = parse_image_url(config, url);
     match reqwest::get(&parsed_url).await {
         Ok(resp) => match resp.json::<Value>().await {
-            Ok(data) => parse_image_url(data["image"].as_str().unwrap_or("")),
+            Ok(data) => parse_image_url(config, data["image"].as_str().unwrap_or("")),
             Err(_) => "Error fetching data".to_string(),
         },
         Err(_) => "Error fetching data".to_string(),
