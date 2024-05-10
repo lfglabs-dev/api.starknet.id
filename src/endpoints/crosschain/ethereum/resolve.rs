@@ -148,7 +148,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                         ResolverFunctionCall::Text(_alt_hash, record) => {
                             match record.as_str() {
                                 // Records available "com.discord" "com.github" "com.twitter"
-                                "url" => {
+                                "avatar" => {
                                     match get_profile_picture(
                                         &state.conf,
                                         &provider,
