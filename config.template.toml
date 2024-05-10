@@ -16,10 +16,12 @@ verifier = "0xXXXXXXXXXXXX"
 old_verifier = "0xXXXXXXXXXXXX"
 pop_verifier = "0xXXXXXXXXXXXX"
 pp_verifier = "0xXXXXXXXXXXXX"
+argent_multicall = "0xXXXXXXXXXXXX"
 
 [variables]
 rpc_url = "xxxxxx"
 refresh_delay = 60 # in seconds
+ipfs_gateway = "https://gateway.pinata.cloud/ipfs/" # or https://ipfs.io/ipfs/
 
 [starkscan]
 api_url = "https://api-testnet.starkscan.co/api/v0"
@@ -77,5 +79,8 @@ uri = [
 [evm]
 private_key = "0xXXXXXXXXXXXX"
 
-[evm_resolvers]
-ethereum = "0x66360d1fA24f9244cA5850798B043711C2c64FFa"
+[evm_networks]
+polygon = 2147483785
+optimism = 2147483658
+base = 2147492101
+arbitrum = 2147525809

@@ -1,6 +1,7 @@
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use starknet::core::types::FieldElement;
+use starknet::core::utils::cairo_short_string_to_felt;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -33,6 +34,7 @@ pub_struct!(Clone, Deserialize; Contracts {
     old_verifier: FieldElement,
     pop_verifier: FieldElement,
     pp_verifier: FieldElement,
+    argent_multicall: FieldElement,
 });
 
 pub_struct!(Clone, Deserialize; Starkscan {
@@ -70,6 +72,7 @@ pub_struct!(Clone, Debug; Altcoins {
 pub_struct!(Clone, Debug, Deserialize; Variables {
     rpc_url: String,
     refresh_delay: f64,
+    ipfs_gateway: String,
 });
 
 #[derive(Deserialize)]
@@ -103,7 +106,7 @@ struct RawConfig {
     altcoins: Altcoins,
     offchain_resolvers: OffchainResolvers,
     evm: Evm,
-    evm_resolvers: HashMap<String, String>,
+    evm_networks: HashMap<String, u64>,
 }
 
 pub_struct!(Clone, Deserialize; Config {
@@ -118,8 +121,7 @@ pub_struct!(Clone, Deserialize; Config {
     altcoins: Altcoins,
     offchain_resolvers: OffchainResolvers,
     evm: Evm,
-    evm_resolvers: HashMap<String, String>,
-    reversed_evm_resolvers: HashMap<String, String>,
+    evm_networks: HashMap<u64, FieldElement>,
 });
 
 impl Altcoins {
@@ -207,9 +209,11 @@ impl From<RawConfig> for Config {
                 reversed_resolvers.insert(value.clone(), key.clone());
             }
         }
-        let mut reversed_evm_resolvers = HashMap::new();
-        for (key, value) in &raw.evm_resolvers {
-            reversed_evm_resolvers.insert(value.clone(), key.clone());
+
+        let mut reversed_evm_networks = HashMap::new();
+        for (key, value) in &raw.evm_networks {
+            let chain_name = cairo_short_string_to_felt(&key.clone()).unwrap();
+            reversed_evm_networks.insert(*value, chain_name);
         }
 
         Config {
@@ -224,8 +228,7 @@ impl From<RawConfig> for Config {
             altcoins: raw.altcoins,
             offchain_resolvers: raw.offchain_resolvers,
             evm: raw.evm,
-            evm_resolvers: raw.evm_resolvers,
-            reversed_evm_resolvers,
+            evm_networks: reversed_evm_networks,
         }
     }
 }

@@ -35,12 +35,12 @@ pub struct TokenIdQuery {
     id: FieldElement,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Deserialize)]
 pub struct VerifierData {
-    verifier: String,
-    field: String,
-    data: Option<String>,
-    extended_data: Option<Vec<String>>,
+    pub verifier: String,
+    pub field: String,
+    pub data: Option<String>,
+    pub extended_data: Option<Vec<String>>,
 }
 
 const NFT_PP_CONTRACT: &'static str =

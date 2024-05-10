@@ -5,12 +5,13 @@ use axum::{
     response::{IntoResponse, Response},
     Router,
 };
+use base64::decode;
 use serde::Serialize;
 use serde_json::Value;
 use starknet::core::types::FieldElement;
-use std::{fmt::Write, sync::Arc};
+use std::{fmt::Write, str, sync::Arc};
 
-use crate::models::AppState;
+use crate::{config::Config, models::AppState};
 
 #[derive(Serialize)]
 pub struct ErrorMessage {
@@ -131,5 +132,37 @@ impl WithState for Router<Arc<AppState>, Body> {
 impl Clone for Box<dyn WithState> {
     fn clone(&self) -> Box<dyn WithState> {
         self.box_clone()
+    }
+}
+
+// profile picture metadata utils
+pub fn parse_base64_image(metadata: &str) -> String {
+    let encoded_part = metadata
+        .split(',')
+        .nth(1)
+        .unwrap_or("")
+        .trim_end_matches('}');
+    let decoded_bytes = decode(encoded_part).unwrap_or_else(|_| vec![]);
+    let decoded_str = str::from_utf8(&decoded_bytes).unwrap_or("{}");
+    let v: Value = serde_json::from_str(decoded_str).unwrap_or(serde_json::json!({}));
+    v["image"].as_str().unwrap_or("").to_string()
+}
+
+fn parse_image_url(config: &Config, url: &str) -> String {
+    if url.starts_with("ipfs://") {
+        url.replace("ipfs://", config.variables.ipfs_gateway.as_str())
+    } else {
+        url.to_string()
+    }
+}
+
+pub async fn fetch_image_url(config: &Config, url: &str) -> String {
+    let parsed_url = parse_image_url(config, url);
+    match reqwest::get(&parsed_url).await {
+        Ok(resp) => match resp.json::<Value>().await {
+            Ok(data) => parse_image_url(config, data["image"].as_str().unwrap_or("")),
+            Err(_) => "Error fetching data".to_string(),
+        },
+        Err(_) => "Error fetching data".to_string(),
     }
 }
