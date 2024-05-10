@@ -6,8 +6,35 @@ use ethers::{
     types::{H160, U256, U64},
     utils::keccak256,
 };
-use starknet::core::types::FieldElement;
+use futures::StreamExt;
+use lazy_static::lazy_static;
+use mongodb::{
+    bson::{doc, Bson, Document},
+    Collection,
+};
+use starknet::{
+    core::{
+        types::{BlockId, BlockTag, FieldElement, FunctionCall},
+        utils::parse_cairo_short_string,
+    },
+    macros::selector,
+    providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
+};
 use std::fmt::Write;
+
+use crate::{
+    config::Config,
+    utils::{fetch_image_url, parse_base64_image, to_hex},
+};
+
+use super::lookup::ResolverFunctionCall;
+
+lazy_static! {
+    static ref NFT_PP_CONTRACT: String =
+        "0x00000000000000000000000000000000006e66745f70705f636f6e7472616374".to_string();
+    static ref NFT_PP_ID: String =
+        "0x00000000000000000000000000000000000000000000006e66745f70705f6964".to_string();
+}
 
 pub fn decode_ens(name: &str) -> String {
     let mut labels: Vec<&str> = Vec::new();
@@ -44,7 +71,7 @@ pub fn to_eth_hex(felt: &FieldElement) -> String {
     result
 }
 
-pub fn decode_data(data: &str) -> Result<String> {
+pub fn decode_data(data: &str) -> Result<(String, ResolverFunctionCall)> {
     let data = data
         .strip_prefix("0x9061b923")
         .ok_or_else(|| anyhow!("Invalid prefix"))?;
@@ -62,7 +89,14 @@ pub fn decode_data(data: &str) -> Result<String> {
 
     let name = decode_ens(&name);
 
-    Ok(name)
+    let rest_of_the_data = decoded[1]
+        .clone()
+        .into_bytes()
+        .ok_or_else(|| anyhow!("Invalid bytes"))?;
+
+    let data = ResolverFunctionCall::try_from(rest_of_the_data.as_slice())?;
+
+    Ok((name, data))
 }
 
 pub fn sign_message(
@@ -108,4 +142,221 @@ pub fn sign_message(
         ))
     );
     Ok(pl)
+}
+
+// user data utils
+pub async fn get_user_data(
+    provider: &JsonRpcClient<HttpTransport>,
+    contract: FieldElement,
+    id: FieldElement,
+    field: FieldElement,
+) -> Option<FieldElement> {
+    let call_result = provider
+        .call(
+            FunctionCall {
+                contract_address: contract,
+                entry_point_selector: selector!("get_user_data"),
+                calldata: vec![
+                    id,
+                    // cairo_short_string_to_felt(field).unwrap(),
+                    field,
+                    FieldElement::ZERO,
+                ],
+            },
+            BlockId::Tag(BlockTag::Latest),
+        )
+        .await;
+
+    match call_result {
+        Ok(result) => {
+            if result[0] != FieldElement::ZERO {
+                return Some(result[0]);
+            }
+            None
+        }
+        Err(e) => {
+            println!("Error fetching user data for field {} : {}", field, e);
+            None
+        }
+    }
+}
+
+// argent multicall to fetch both fields at once
+pub async fn get_user_data_multicall(
+    provider: &JsonRpcClient<HttpTransport>,
+    config: &Config,
+    id: FieldElement,
+    fields: Vec<FieldElement>,
+) -> Option<FieldElement> {
+    let mut calls: Vec<FieldElement> = vec![FieldElement::from(fields.len())];
+    for field in fields {
+        calls.push(config.contracts.starknetid);
+        calls.push(selector!("get_user_data"));
+        calls.push(FieldElement::THREE);
+        calls.push(id);
+        calls.push(field);
+        calls.push(FieldElement::ZERO)
+    }
+    let call_result = provider
+        .call(
+            FunctionCall {
+                contract_address: config.contracts.argent_multicall,
+                entry_point_selector: selector!("aggregate"),
+                calldata: calls,
+            },
+            BlockId::Tag(BlockTag::Latest),
+        )
+        .await;
+
+    match call_result {
+        Ok(result) => {
+            if result[3] != FieldElement::ZERO {
+                Some(result[3])
+            } else if result[5] != FieldElement::ZERO {
+                Some(result[5])
+            } else {
+                None
+            }
+        }
+        Err(err) => {
+            println!("Error while fetching balances: {:?}", err);
+            None
+        }
+    }
+}
+
+pub async fn domain_to_address(
+    provider: &JsonRpcClient<HttpTransport>,
+    naming_contract: FieldElement,
+    encoded_domain: Vec<FieldElement>,
+) -> Option<FieldElement> {
+    let mut calldata: Vec<FieldElement> = vec![FieldElement::from(encoded_domain.len())];
+    calldata.extend(encoded_domain);
+    calldata.push(FieldElement::ZERO);
+    let call_result = provider
+        .call(
+            FunctionCall {
+                contract_address: naming_contract,
+                entry_point_selector: selector!("domain_to_address"),
+                calldata,
+            },
+            BlockId::Tag(BlockTag::Latest),
+        )
+        .await;
+
+    match call_result {
+        Ok(result) => {
+            println!("domain_to_address result: {:?}", result);
+            if result[0] != FieldElement::ZERO {
+                return Some(result[0]);
+            }
+            None
+        }
+        Err(e) => {
+            println!("Error fetching starknet address for domain : {}", e);
+            None
+        }
+    }
+}
+
+// Profile picture metadata utils
+pub async fn get_profile_picture(
+    provider: &JsonRpcClient<HttpTransport>,
+    verifier_data_collection: Collection<Document>,
+    pfp_verifier: FieldElement,
+    id: FieldElement,
+) -> Option<String> {
+    let pipeline: Vec<Document> = vec![doc! {
+        "$match": {
+            "_cursor.to": null,
+            "id": to_hex(&id),
+            "verifier": to_hex(&pfp_verifier)
+        }
+    }];
+    match verifier_data_collection.aggregate(pipeline, None).await {
+        Ok(mut cursor) => {
+            let mut contract_addr: String = String::new();
+            let mut token_id: (String, String) = (String::new(), String::new());
+            while let Some(doc) = cursor.next().await {
+                if let Ok(doc) = doc {
+                    let field = &doc.get_str("field").unwrap_or_default().to_owned();
+                    if *field == *NFT_PP_CONTRACT {
+                        contract_addr = doc.get_str("data").unwrap_or_default().to_owned();
+                    } else if *field == *NFT_PP_ID {
+                        if let Ok(extended_data) = doc.get_array("extended_data") {
+                            if let (Some(Bson::String(first)), Some(Bson::String(second))) =
+                                (extended_data.get(0), extended_data.get(1))
+                            {
+                                token_id = (first.clone(), second.clone());
+                            } else {
+                                println!("Error: extended_data array does not contain two strings");
+                            }
+                        } else {
+                            println!("Error: failed to get 'extended_data' as array");
+                        }
+                    }
+                }
+            }
+            if contract_addr.is_empty() || token_id.0.is_empty() {
+                return None;
+            }
+
+            // we fetch the tokenURI from the contract
+            let call_result = provider
+                .call(
+                    FunctionCall {
+                        contract_address: FieldElement::from_hex_be(&contract_addr).unwrap(),
+                        entry_point_selector: selector!("tokenURI"),
+                        calldata: vec![
+                            FieldElement::from_hex_be(&token_id.0).unwrap(),
+                            FieldElement::from_hex_be(&token_id.1).unwrap(),
+                        ],
+                    },
+                    BlockId::Tag(BlockTag::Latest),
+                )
+                .await;
+            match call_result {
+                Ok(result) => {
+                    let pfp_metadata = result
+                        .iter()
+                        .skip(1)
+                        .filter_map(|val| parse_cairo_short_string(val).ok())
+                        .collect::<Vec<String>>() // Collect into a vector of strings
+                        .join("");
+                    match get_profile_picture_uri(Some(&pfp_metadata), true, &id.to_string()).await
+                    {
+                        Some(pfp) => {
+                            println!("Profile picture fetched successfully {}", pfp);
+                            Some(pfp)
+                        }
+                        None => {
+                            println!("Error fetching profile picture from tokenURI");
+                            None
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("Error fetching tokenURI for token : {}", e);
+                    None
+                }
+            }
+        }
+        Err(_) => {
+            println!("Error while fetching profile picture from database");
+            None
+        }
+    }
+}
+
+pub async fn get_profile_picture_uri(
+    uri: Option<&str>,
+    use_default_pfp: bool,
+    id: &str,
+) -> Option<String> {
+    match uri {
+        Some(u) if u.contains("base64") => Some(parse_base64_image(u)),
+        Some(u) => Some(fetch_image_url(u).await),
+        None if use_default_pfp => Some(format!("https://starknet.id/api/identicons/{}", id)),
+        _ => None,
+    }
 }

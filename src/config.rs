@@ -33,6 +33,7 @@ pub_struct!(Clone, Deserialize; Contracts {
     old_verifier: FieldElement,
     pop_verifier: FieldElement,
     pp_verifier: FieldElement,
+    argent_multicall: FieldElement,
 });
 
 pub_struct!(Clone, Deserialize; Starkscan {
