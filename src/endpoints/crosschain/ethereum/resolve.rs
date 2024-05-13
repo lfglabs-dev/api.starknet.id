@@ -172,8 +172,9 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                 }
                                 _ => {
                                     // we check if this data was added through a verifier
+                                    // let record_config = state.conf.evm_records_verifiers.get(&record).unwrap();
                                     match state.conf.evm_records_verifiers.get(&record) {
-                                        Some(record_config) => {
+                                        Some(record_config) => { 
                                             let record_data = get_verifier_data(
                                                 &state.conf,
                                                 &provider,
@@ -183,7 +184,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                             .await;
                                             match record_data {
                                                 Some(record_data) => {
-                                                    return vec![Token::String(record_data)];
+                                                    vec![Token::String(record_data)]
                                                 }
                                                 None => {
                                                     return get_error(format!(
@@ -200,13 +201,11 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                                 &state.conf,
                                                 &provider,
                                                 id,
-                                                record,
+                                                &record,
                                             )
                                             .await
                                             {
-                                                Some(data) => {
-                                                    return vec![Token::String(data)];
-                                                }
+                                                Some(data) => vec![Token::String(data)],
                                                 None => {
                                                     return get_error(format!(
                                                         "No data found for record: {}",
@@ -216,6 +215,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                             }
                                         }
                                     }
+                                    
                                 }
                             }
                         }

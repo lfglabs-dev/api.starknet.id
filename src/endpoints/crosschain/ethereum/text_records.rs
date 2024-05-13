@@ -137,7 +137,7 @@ pub async fn get_unbounded_user_data(
     config: &Config,
     provider: &JsonRpcClient<HttpTransport>,
     id: FieldElement,
-    field: String,
+    field: &str,
 ) -> Option<String> {
     let call_result = provider
         .call(
@@ -146,7 +146,7 @@ pub async fn get_unbounded_user_data(
                 entry_point_selector: selector!("get_unbounded_user_data"),
                 calldata: vec![
                     id,
-                    cairo_short_string_to_felt(&field).unwrap(),
+                    cairo_short_string_to_felt(field).unwrap(),
                     FieldElement::ZERO,
                 ],
             },
