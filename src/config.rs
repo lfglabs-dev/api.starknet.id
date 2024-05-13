@@ -6,6 +6,8 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 
+use crate::endpoints::crosschain::ethereum::text_records::HandlerType;
+
 macro_rules! pub_struct {
     ($($derive:path),*; $name:ident {$($field:ident: $t:ty),* $(,)?}) => {
         #[derive($($derive),*)]
@@ -73,6 +75,7 @@ pub_struct!(Clone, Debug, Deserialize; Variables {
     rpc_url: String,
     refresh_delay: f64,
     ipfs_gateway: String,
+    discord_token: String,
 });
 
 #[derive(Deserialize)]
@@ -94,6 +97,12 @@ pub_struct!(Clone, Debug, Deserialize; Evm {
 #[derive(Debug, Clone)]
 pub struct OffchainResolvers(HashMap<String, OffchainResolver>);
 
+pub_struct!(Clone, Debug, Deserialize; EvmRecordVerifier {
+    verifier_contract: FieldElement,
+    field: String,
+    handler: HandlerType,
+});
+
 #[derive(Deserialize)]
 struct RawConfig {
     server: Server,
@@ -107,6 +116,7 @@ struct RawConfig {
     offchain_resolvers: OffchainResolvers,
     evm: Evm,
     evm_networks: HashMap<String, u64>,
+    evm_records_verifiers: HashMap<String, EvmRecordVerifier>,
 }
 
 pub_struct!(Clone, Deserialize; Config {
@@ -122,6 +132,7 @@ pub_struct!(Clone, Deserialize; Config {
     offchain_resolvers: OffchainResolvers,
     evm: Evm,
     evm_networks: HashMap<u64, FieldElement>,
+    evm_records_verifiers: HashMap<String, EvmRecordVerifier>,
 });
 
 impl Altcoins {
@@ -229,6 +240,7 @@ impl From<RawConfig> for Config {
             offchain_resolvers: raw.offchain_resolvers,
             evm: raw.evm,
             evm_networks: reversed_evm_networks,
+            evm_records_verifiers: raw.evm_records_verifiers,
         }
     }
 }

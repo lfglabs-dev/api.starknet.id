@@ -37,6 +37,8 @@ use starknet::{
 };
 use starknet_id::encode;
 
+use super::text_records::get_verifier_data;
+
 #[derive(Deserialize, Debug, Clone)]
 pub struct ResolveQuery {
     data: String,   // data encoded
@@ -147,7 +149,6 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                     let payload: Vec<Token> = match resolver_function_call {
                         ResolverFunctionCall::Text(_alt_hash, record) => {
                             match record.as_str() {
-                                // Records available "com.discord" "com.github" "com.twitter"
                                 "avatar" => {
                                     match get_profile_picture(
                                         &state.conf,
@@ -170,8 +171,42 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                     }
                                 }
                                 _ => {
-                                    println!("Record not implemented: {:?}", record);
-                                    return get_error(format!("Record not implemented {}", record));
+                                    let mut res: Vec<Token> = vec![];
+
+                                    if let Some(record_config) =
+                                        state.conf.evm_records_verifiers.get(&record)
+                                    {
+                                        match get_verifier_data(
+                                            &state.conf,
+                                            &provider,
+                                            id,
+                                            record_config,
+                                        )
+                                        .await
+                                        {
+                                            Some(record_data) => {
+                                                println!("Data: {:?}", record_data);
+                                                return vec![Token::String(record_data)];
+                                            }
+                                            None => {
+                                                println!("No data found for record: {:?}", record);
+                                                // return vec![];
+                                                return get_error(format!(
+                                                    "No data found for record: {}",
+                                                    record
+                                                ));
+                                            }
+                                        }
+                                    } else {
+                                        // fetch user data for record
+                                        // header (image url), display, name, url, description, email,
+                                        // mail, notice, location, phone
+                                        println!("Record not implemented: {:?}", record);
+                                        return get_error(format!(
+                                            "Record not implemented {}",
+                                            record
+                                        ));
+                                    }
                                 }
                             }
                         }
