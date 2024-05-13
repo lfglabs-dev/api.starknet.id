@@ -37,7 +37,7 @@ use starknet::{
 };
 use starknet_id::encode;
 
-use super::text_records::get_verifier_data;
+use super::text_records::{get_unbounded_user_data, get_verifier_data};
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct ResolveQuery {
@@ -171,41 +171,50 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                     }
                                 }
                                 _ => {
-                                    let mut res: Vec<Token> = vec![];
-
-                                    if let Some(record_config) =
-                                        state.conf.evm_records_verifiers.get(&record)
-                                    {
-                                        match get_verifier_data(
-                                            &state.conf,
-                                            &provider,
-                                            id,
-                                            record_config,
-                                        )
-                                        .await
-                                        {
-                                            Some(record_data) => {
-                                                println!("Data: {:?}", record_data);
-                                                return vec![Token::String(record_data)];
-                                            }
-                                            None => {
-                                                println!("No data found for record: {:?}", record);
-                                                // return vec![];
-                                                return get_error(format!(
-                                                    "No data found for record: {}",
-                                                    record
-                                                ));
+                                    // we check if this data was added through a verifier
+                                    match state.conf.evm_records_verifiers.get(&record) {
+                                        Some(record_config) => {
+                                            let record_data = get_verifier_data(
+                                                &state.conf,
+                                                &provider,
+                                                id,
+                                                record_config,
+                                            )
+                                            .await;
+                                            match record_data {
+                                                Some(record_data) => {
+                                                    return vec![Token::String(record_data)];
+                                                }
+                                                None => {
+                                                    return get_error(format!(
+                                                        "No data found for record: {}",
+                                                        record
+                                                    ));
+                                                }
                                             }
                                         }
-                                    } else {
-                                        // fetch user data for record
-                                        // header (image url), display, name, url, description, email,
-                                        // mail, notice, location, phone
-                                        println!("Record not implemented: {:?}", record);
-                                        return get_error(format!(
-                                            "Record not implemented {}",
-                                            record
-                                        ));
+                                        None => {
+                                            // if not we fetch user data for this record
+                                            // existing records : header (image url), display, name, url, description, email, mail, notice, location, phone
+                                            match get_unbounded_user_data(
+                                                &state.conf,
+                                                &provider,
+                                                id,
+                                                record,
+                                            )
+                                            .await
+                                            {
+                                                Some(data) => {
+                                                    return vec![Token::String(data)];
+                                                }
+                                                None => {
+                                                    return get_error(format!(
+                                                        "No data found for record: {}",
+                                                        record
+                                                    ));
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }

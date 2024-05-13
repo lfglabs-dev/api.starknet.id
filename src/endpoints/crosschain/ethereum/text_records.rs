@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use starknet::{
     core::{
         types::{BlockId, BlockTag, FieldElement, FunctionCall},
-        utils::cairo_short_string_to_felt,
+        utils::{cairo_short_string_to_felt, parse_cairo_short_string},
     },
     macros::selector,
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
@@ -125,6 +125,46 @@ pub async fn get_verifier_data(
                     None
                 }
             }
+        }
+        Err(e) => {
+            println!("Error while fetchingverifier data: {:?}", e);
+            None
+        }
+    }
+}
+
+pub async fn get_unbounded_user_data(
+    config: &Config,
+    provider: &JsonRpcClient<HttpTransport>,
+    id: FieldElement,
+    field: String,
+) -> Option<String> {
+    let call_result = provider
+        .call(
+            FunctionCall {
+                contract_address: config.contracts.starknetid,
+                entry_point_selector: selector!("get_unbounded_user_data"),
+                calldata: vec![
+                    id,
+                    cairo_short_string_to_felt(&field).unwrap(),
+                    FieldElement::ZERO,
+                ],
+            },
+            BlockId::Tag(BlockTag::Latest),
+        )
+        .await;
+    match call_result {
+        Ok(result) => {
+            if result[0] == FieldElement::ZERO {
+                return None;
+            }
+            let res = result
+                .iter()
+                .skip(1)
+                .filter_map(|val| parse_cairo_short_string(val).ok())
+                .collect::<Vec<String>>() // Collect into a vector of strings
+                .join("");
+            Some(res)
         }
         Err(e) => {
             println!("Error while fetchingverifier data: {:?}", e);
