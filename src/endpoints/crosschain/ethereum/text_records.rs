@@ -1,6 +1,7 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use starknet::{
     core::{
         types::{BlockId, BlockTag, FieldElement, FunctionCall},
@@ -85,8 +86,30 @@ impl EvmRecordVerifier {
     }
 
     async fn get_twitter_name(&self, config: &Config, id: FieldElement) -> Result<String> {
-        // implementation
-        Ok("".to_string())
+        let social_id = FieldElement::to_string(&id);
+        let client = Client::new();
+        let response = client.get("https://twttrapi.p.rapidapi.com/get-user-by-id")
+            .header("X-RapidAPI-Key", config.variables.twitter_api_key.clone())
+            .header("X-RapidAPI-Host", "twttrapi.p.rapidapi.com")
+            .query(&[("user_id", &social_id)])
+            .send()
+            .await?;
+
+        if response.status() != StatusCode::OK {
+            anyhow::bail!("Twitter API returned non-OK status: {}", response.status());
+        }
+        let response_body = response.text().await?;
+        let json: Value = serde_json::from_str(&response_body)?;
+        let screen_name = json
+            .get("data")
+            .and_then(|data| data.get("user_result"))
+            .and_then(|user_result| user_result.get("result"))
+            .and_then(|result| result.get("legacy"))
+            .and_then(|legacy| legacy.get("screen_name"))
+            .and_then(|screen_name| screen_name.as_str())
+            .ok_or_else(|| anyhow!("Failed to extract screen name"));
+
+        Ok(screen_name.map(|name| name.to_string()).unwrap())
     }
 }
 
