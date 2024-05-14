@@ -76,7 +76,10 @@ pub_struct!(Clone, Debug, Deserialize; Variables {
     refresh_delay: f64,
     ipfs_gateway: String,
     discord_token: String,
+    discord_api_url: String,
     twitter_api_key: String,
+    twitter_api_url: String,
+    github_api_url: String,
 });
 
 #[derive(Deserialize)]

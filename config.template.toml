@@ -23,7 +23,10 @@ rpc_url = "xxxxxx"
 refresh_delay = 60 # in seconds
 ipfs_gateway = "https://gateway.pinata.cloud/ipfs/" # or https://ipfs.io/ipfs/
 discord_token = "xxxxxx"
+discord_api_url = "https://discord.com/api"
 twitter_api_key = "xxxxxx"
+twitter_api_url = "xxxxxx"
+github_api_url = "https://api.github.com"
 
 [starkscan]
 api_url = "https://api-testnet.starkscan.co/api/v0"

@@ -174,7 +174,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                     // we check if this data was added through a verifier
                                     // let record_config = state.conf.evm_records_verifiers.get(&record).unwrap();
                                     match state.conf.evm_records_verifiers.get(&record) {
-                                        Some(record_config) => { 
+                                        Some(record_config) => {
                                             let record_data = get_verifier_data(
                                                 &state.conf,
                                                 &provider,
@@ -215,7 +215,6 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                             }
                                         }
                                     }
-                                    
                                 }
                             }
                         }

@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -15,6 +15,7 @@ use crate::config::{Config, EvmRecordVerifier};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum HandlerType {
+    Static,
     GetDiscordName,
     GetGithubName,
     GetTwitterName,
@@ -33,15 +34,16 @@ struct DiscordUser {
 impl EvmRecordVerifier {
     pub async fn execute_handler(&self, config: &Config, id: FieldElement) -> Result<String> {
         match self.handler {
+            HandlerType::Static => Ok(FieldElement::to_string(&id)),
             HandlerType::GetDiscordName => self.get_discord_name(config, id).await,
-            HandlerType::GetGithubName => self.get_github_name(id).await,
+            HandlerType::GetGithubName => self.get_github_name(config, id).await,
             HandlerType::GetTwitterName => self.get_twitter_name(config, id).await,
         }
     }
 
     async fn get_discord_name(&self, config: &Config, id: FieldElement) -> Result<String> {
         let social_id = FieldElement::to_string(&id);
-        let url = format!("https://discord.com/api/users/{}", social_id);
+        let url = format!("{}/users/{}", config.variables.discord_api_url, social_id);
         let client = Client::new();
         let resp = client
             .get(&url)
@@ -58,9 +60,9 @@ impl EvmRecordVerifier {
 
         Ok(resp.username)
     }
-    async fn get_github_name(&self, id: FieldElement) -> Result<String> {
+    async fn get_github_name(&self, config: &Config, id: FieldElement) -> Result<String> {
         let social_id = FieldElement::to_string(&id);
-        let url = format!("https://api.github.com/user/{}", social_id);
+        let url = format!("{}/user/{}", config.variables.github_api_url, social_id);
         let client = Client::builder()
             .user_agent("request")
             .build()
@@ -88,7 +90,11 @@ impl EvmRecordVerifier {
     async fn get_twitter_name(&self, config: &Config, id: FieldElement) -> Result<String> {
         let social_id = FieldElement::to_string(&id);
         let client = Client::new();
-        let response = client.get("https://twttrapi.p.rapidapi.com/get-user-by-id")
+        let response = client
+            .get(format!(
+                "{}/get-user-by-id",
+                config.variables.twitter_api_url
+            ))
             .header("X-RapidAPI-Key", config.variables.twitter_api_key.clone())
             .header("X-RapidAPI-Host", "twttrapi.p.rapidapi.com")
             .query(&[("user_id", &social_id)])
