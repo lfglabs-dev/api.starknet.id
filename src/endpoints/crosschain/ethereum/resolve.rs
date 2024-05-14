@@ -37,6 +37,8 @@ use starknet::{
 };
 use starknet_id::encode;
 
+use super::text_records::{get_unbounded_user_data, get_verifier_data};
+
 #[derive(Deserialize, Debug, Clone)]
 pub struct ResolveQuery {
     data: String,   // data encoded
@@ -147,7 +149,6 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                     let payload: Vec<Token> = match resolver_function_call {
                         ResolverFunctionCall::Text(_alt_hash, record) => {
                             match record.as_str() {
-                                // Records available "com.discord" "com.github" "com.twitter"
                                 "avatar" => {
                                     match get_profile_picture(
                                         &state.conf,
@@ -170,8 +171,50 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                     }
                                 }
                                 _ => {
-                                    println!("Record not implemented: {:?}", record);
-                                    return get_error(format!("Record not implemented {}", record));
+                                    // we check if this data was added through a verifier
+                                    // let record_config = state.conf.evm_records_verifiers.get(&record).unwrap();
+                                    match state.conf.evm_records_verifiers.get(&record) {
+                                        Some(record_config) => {
+                                            let record_data = get_verifier_data(
+                                                &state.conf,
+                                                &provider,
+                                                id,
+                                                record_config,
+                                            )
+                                            .await;
+                                            match record_data {
+                                                Some(record_data) => {
+                                                    vec![Token::String(record_data)]
+                                                }
+                                                None => {
+                                                    return get_error(format!(
+                                                        "No data found for record: {}",
+                                                        record
+                                                    ));
+                                                }
+                                            }
+                                        }
+                                        None => {
+                                            // if not we fetch user data for this record
+                                            // existing records : header (image url), display, name, url, description, email, mail, notice, location, phone
+                                            match get_unbounded_user_data(
+                                                &state.conf,
+                                                &provider,
+                                                id,
+                                                &record,
+                                            )
+                                            .await
+                                            {
+                                                Some(data) => vec![Token::String(data)],
+                                                None => {
+                                                    return get_error(format!(
+                                                        "No data found for record: {}",
+                                                        record
+                                                    ));
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

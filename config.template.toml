@@ -22,6 +22,11 @@ argent_multicall = "0xXXXXXXXXXXXX"
 rpc_url = "xxxxxx"
 refresh_delay = 60 # in seconds
 ipfs_gateway = "https://gateway.pinata.cloud/ipfs/" # or https://ipfs.io/ipfs/
+discord_token = "xxxxxx"
+discord_api_url = "https://discord.com/api"
+twitter_api_key = "xxxxxx"
+twitter_api_url = "xxxxxx"
+github_api_url = "https://api.github.com"
 
 [starkscan]
 api_url = "https://api-testnet.starkscan.co/api/v0"
@@ -84,3 +89,20 @@ polygon = 2147483785
 optimism = 2147483658
 base = 2147492101
 arbitrum = 2147525809
+
+[evm_records_verifiers]
+
+[evm_records_verifiers."com.discord"]
+verifier_contract = "0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184"
+field = "discord"
+handler = "GetDiscordName"
+
+[evm_records_verifiers."com.github"]
+verifier_contract = "0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184"
+field = "github"
+handler = "GetGithubName"
+
+[evm_records_verifiers."com.twitter"]
+verifier_contract = "0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184"
+field = "twitter"
+handler = "GetTwitterName"
