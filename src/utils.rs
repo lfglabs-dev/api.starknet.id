@@ -5,7 +5,7 @@ use axum::{
     response::{IntoResponse, Response},
     Router,
 };
-use base64::decode;
+use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::Serialize;
 use serde_json::Value;
 use starknet::core::types::FieldElement;
@@ -142,7 +142,7 @@ pub fn parse_base64_image(metadata: &str) -> String {
         .nth(1)
         .unwrap_or("")
         .trim_end_matches('}');
-    let decoded_bytes = decode(encoded_part).unwrap_or_else(|_| vec![]);
+    let decoded_bytes = STANDARD.decode(encoded_part).unwrap_or_else(|_| vec![]);
     let decoded_str = str::from_utf8(&decoded_bytes).unwrap_or("{}");
     let v: Value = serde_json::from_str(decoded_str).unwrap_or(serde_json::json!({}));
     v["image"].as_str().unwrap_or("").to_string()
