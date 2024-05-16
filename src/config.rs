@@ -7,6 +7,7 @@ use std::env;
 use std::fs;
 
 use crate::endpoints::crosschain::ethereum::text_records::HandlerType;
+use crate::utils::to_hex;
 
 macro_rules! pub_struct {
     ($($derive:path),*; $name:ident {$($field:ident: $t:ty),* $(,)?}) => {
@@ -54,7 +55,8 @@ pub_struct!(Clone, Debug, Deserialize; AltcoinData {
     min_price: u64,
     max_price: u64,
     decimals: u32,
-    max_quote_validity: i64
+    max_quote_validity: i64,
+    auto_renew_contract: Option<FieldElement>,
 });
 
 #[derive(Debug, Deserialize)]
@@ -137,6 +139,7 @@ pub_struct!(Clone, Deserialize; Config {
     evm: Evm,
     evm_networks: HashMap<u64, FieldElement>,
     evm_records_verifiers: HashMap<String, EvmRecordVerifier>,
+    subscription_to_altcoin: HashMap<FieldElement, String>,
 });
 
 impl Altcoins {
@@ -151,6 +154,7 @@ impl Altcoins {
                     max_price: val.max_price,
                     decimals: val.decimals,
                     max_quote_validity: val.max_quote_validity,
+                    auto_renew_contract: val.auto_renew_contract,
                 };
                 (val.address, altcoin_data)
             })
@@ -231,6 +235,13 @@ impl From<RawConfig> for Config {
             reversed_evm_networks.insert(*value, chain_name);
         }
 
+        let mut subscription_to_altcoin = HashMap::new();
+        for (key, value) in &raw.altcoins.data {
+            if let Some(auto_renew_contract) = value.auto_renew_contract {
+                subscription_to_altcoin.insert(auto_renew_contract, to_hex(&key.clone()));
+            }
+        }
+
         Config {
             server: raw.server,
             databases: raw.databases,
@@ -245,6 +256,7 @@ impl From<RawConfig> for Config {
             evm: raw.evm,
             evm_networks: reversed_evm_networks,
             evm_records_verifiers: raw.evm_records_verifiers,
+            subscription_to_altcoin,
         }
     }
 }

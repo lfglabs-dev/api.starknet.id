@@ -57,6 +57,7 @@ min_price = 500
 max_price = 5000
 decimals = 18
 max_quote_validity = 300 # it moves faster so we reduce the quote validity
+auto_renew_contract = "0x078F63fcD145Ddc6ca932E562b466AFbfD7c9E882C9aa70f3e5b2ce05cD892eA"
 
 [altcoins.USDC]
 address = "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8"
