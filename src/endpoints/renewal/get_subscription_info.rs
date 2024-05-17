@@ -1,5 +1,4 @@
 use crate::{
-    config,
     models::AppState,
     utils::{get_error, to_hex},
 };
@@ -14,10 +13,7 @@ use mongodb::{bson::doc, options::AggregateOptions};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
 #[derive(Deserialize)]
 pub struct StarknetIdQuery {
@@ -191,6 +187,15 @@ pub async fn handler(
             while let Some(doc) = cursor.next().await {
                 if let Ok(doc) = doc {
                     if let Ok(domain) = doc.get_str("domain") {
+                        // Initialize a Subscription entry for the domain if it doesn't exist
+                        let entry =
+                            results
+                                .entry(domain.to_string())
+                                .or_insert_with(|| Subscriptions {
+                                    eth_subscriptions: None,
+                                    altcoin_subscriptions: None,
+                                });
+
                         let enabled = doc.get_bool("enabled").unwrap_or(false);
                         let altcoin_enabled = doc.get_bool("altcoin_enabled").unwrap_or(false);
 
@@ -209,15 +214,9 @@ pub async fn handler(
                                 auto_renew_contract:  data.get_str("auto_renew_contract").ok().map(|s| s.to_string()),
                                 token: Some("0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7".to_string())
                             };
-                            results
-                                .entry(domain.to_string().clone())
-                                .or_insert_with(|| Subscriptions {
-                                    eth_subscriptions: Some(vec![]),
-                                    altcoin_subscriptions: None,
-                                })
+                            entry
                                 .eth_subscriptions
-                                .as_mut()
-                                .unwrap()
+                                .get_or_insert_with(Vec::new)
                                 .push(eth_subscription);
                         }
                         if altcoin_enabled {
@@ -244,15 +243,9 @@ pub async fn handler(
                                 auto_renew_contract,
                                 token,
                             };
-                            results
-                                .entry(domain.to_string())
-                                .or_insert_with(|| Subscriptions {
-                                    eth_subscriptions: None,
-                                    altcoin_subscriptions: Some(vec![]),
-                                })
+                            entry
                                 .altcoin_subscriptions
-                                .as_mut()
-                                .unwrap()
+                                .get_or_insert_with(Vec::new)
                                 .push(altcoin_subscription);
                         }
                     }
