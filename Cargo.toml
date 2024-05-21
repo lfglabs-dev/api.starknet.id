@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "c974e5cb42e8d8344cee910b76005ec46b4dd3ed" }
 starknet-id = { git = "https://github.com/starknet-id/starknetid.rs", rev = "2b30c2453b96789a628c86d2edebb1023fa2e77d" }
+starknet-crypto = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "c974e5cb42e8d8344cee910b76005ec46b4dd3ed", package = "starknet-crypto" }
 axum_auto_routes = { git = "https://github.com/Th0rgal/axum_auto_routes.git", rev = "f9e1d2083e887cd264642359c4aa851938da6f09" }
 axum = "0.6.18"
 futures = "0.3.28"
@@ -35,6 +36,8 @@ ethabi = "18.0.0"
 ethers = "2.0.14"
 serde_urlencoded = "0.7.1"
 bytes = "1.6.0"
+crypto-bigint = "0.5.5"
+rand = "0.8.5"
 
 # required for solana SDK to work
 [patch.crates-io.curve25519-dalek]

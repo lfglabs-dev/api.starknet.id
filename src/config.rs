@@ -109,6 +109,10 @@ pub_struct!(Clone, Debug, Deserialize; EvmRecordVerifier {
     handler: HandlerType,
 });
 
+pub_struct!(Clone, Debug, Deserialize; Campaigns {
+    free_domain_priv_key: FieldElement,
+});
+
 #[derive(Deserialize)]
 struct RawConfig {
     server: Server,
@@ -123,6 +127,7 @@ struct RawConfig {
     evm: Evm,
     evm_networks: HashMap<String, u64>,
     evm_records_verifiers: HashMap<String, EvmRecordVerifier>,
+    campaigns: Campaigns,
 }
 
 pub_struct!(Clone, Deserialize; Config {
@@ -140,6 +145,7 @@ pub_struct!(Clone, Deserialize; Config {
     evm_networks: HashMap<u64, FieldElement>,
     evm_records_verifiers: HashMap<String, EvmRecordVerifier>,
     subscription_to_altcoin: HashMap<FieldElement, String>,
+    campaigns: Campaigns,
 });
 
 impl Altcoins {
@@ -257,6 +263,7 @@ impl From<RawConfig> for Config {
             evm_networks: reversed_evm_networks,
             evm_records_verifiers: raw.evm_records_verifiers,
             subscription_to_altcoin,
+            campaigns: raw.campaigns,
         }
     }
 }
