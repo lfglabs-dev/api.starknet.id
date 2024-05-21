@@ -34,6 +34,12 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<FreeDomainQuery>,
 ) -> impl IntoResponse {
+    // verify campaign is active
+    let now = chrono::Utc::now().timestamp();
+    if now < state.conf.free_domains.start_time || now > state.conf.free_domains.end_time {
+        return get_error("Campaign not active".to_string());
+    }
+
     // assert domain is a root domain & not too long
     let domain_parts = query.domain.split('.').collect::<Vec<&str>>();
     if domain_parts.len() != 2 {
@@ -70,10 +76,7 @@ pub async fn handler(
                 ),
                 &FREE_DOMAIN_STR,
             );
-            match ecdsa_sign(
-                &state.conf.campaigns.free_domain_priv_key.clone(),
-                &message_hash,
-            ) {
+            match ecdsa_sign(&state.conf.free_domains.priv_key.clone(), &message_hash) {
                 Ok(signature) => {
                     // we blacklist the coupon code
                     match free_domains
@@ -101,9 +104,7 @@ pub async fn handler(
                             })),
                         )
                             .into_response(),
-                        Err(e) => {
-                            return get_error(format!("Error while updating coupon code: {}", e));
-                        }
+                        Err(e) => get_error(format!("Error while updating coupon code: {}", e)),
                     }
                 }
                 Err(e) => get_error(format!("Error while generating Starknet signature: {}", e)),

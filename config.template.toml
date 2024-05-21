@@ -108,5 +108,7 @@ verifier_contract = "0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE
 field = "twitter"
 handler = "GetTwitterName"
 
-[campaigns]
-free_domain_priv_key = "0xXXXXXXXXXXXX"
+[free_domains]
+priv_key = "0xXXXXXXXXXXXX"
+start_time = 1716290276
+end_time = 1718986676
