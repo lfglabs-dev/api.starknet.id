@@ -46,7 +46,7 @@ pub async fn handler(
         return get_error("Domain must be a root domain".to_string());
     }
     if domain_parts[0].len() < 5 {
-        return get_error("Domain too long".to_string());
+        return get_error("Domain too short".to_string());
     }
 
     let free_domains = state
