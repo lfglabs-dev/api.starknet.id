@@ -149,13 +149,10 @@ pub async fn get_verifier_data(
 
     match call_result {
         Ok(result) => {
-            let social_id = if result[3] != FieldElement::ZERO {
-                result[3]
-            } else if result[5] != FieldElement::ZERO {
-                result[5]
-            } else {
+            let social_id = find_social_id(&result);
+            if social_id == FieldElement::ZERO {
                 return None;
-            };
+            }
             match record_config.execute_handler(config, social_id).await {
                 Ok(name) => Some(name),
                 Err(e) => {
@@ -170,6 +167,21 @@ pub async fn get_verifier_data(
             None
         }
     }
+}
+
+fn find_social_id(result: &[FieldElement]) -> FieldElement {
+    // Remove the first element
+    let skipped_result = &result[2..];
+
+    // Iterate over chunks of 2 elements
+    for chunk in skipped_result.chunks(2) {
+        if let [_, second] = chunk {
+            if *second != FieldElement::ZERO {
+                return *second;
+            }
+        }
+    }
+    FieldElement::ZERO
 }
 
 pub async fn get_unbounded_user_data(
