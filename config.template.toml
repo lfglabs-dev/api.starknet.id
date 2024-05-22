@@ -94,16 +94,16 @@ arbitrum = 2147525809
 [evm_records_verifiers]
 
 [evm_records_verifiers."com.discord"]
-verifier_contract = "0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184"
+verifier_contracts = ["0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184"]
 field = "discord"
 handler = "GetDiscordName"
 
 [evm_records_verifiers."com.github"]
-verifier_contract = "0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184"
+verifier_contracts = ["0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184"]
 field = "github"
 handler = "GetGithubName"
 
 [evm_records_verifiers."com.twitter"]
-verifier_contract = "0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184"
+verifier_contracts = ["0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184"]
 field = "twitter"
 handler = "GetTwitterName"
