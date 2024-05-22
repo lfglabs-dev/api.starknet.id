@@ -125,17 +125,23 @@ pub async fn get_verifier_data(
     id: FieldElement,
     record_config: &EvmRecordVerifier,
 ) -> Option<String> {
+    let mut calls: Vec<FieldElement> = vec![FieldElement::from(record_config.verifier_contracts.len())];
+    for verifier in &record_config.verifier_contracts {
+        calls.push(config.contracts.starknetid);
+        calls.push(selector!("get_verifier_data"));
+        calls.push(FieldElement::from_dec_str("4").unwrap());
+        calls.push(id);
+        calls.push(cairo_short_string_to_felt(&record_config.field).unwrap());
+        calls.push(*verifier);
+        calls.push(FieldElement::ZERO)
+    }
+
     let call_result = provider
         .call(
             FunctionCall {
-                contract_address: config.contracts.starknetid,
-                entry_point_selector: selector!("get_verifier_data"),
-                calldata: vec![
-                    id,
-                    cairo_short_string_to_felt(&record_config.field).unwrap(),
-                    record_config.verifier_contract,
-                    FieldElement::ZERO,
-                ],
+                contract_address: config.contracts.argent_multicall,
+                entry_point_selector: selector!("aggregate"),
+                calldata: calls,
             },
             BlockId::Tag(BlockTag::Latest),
         )
@@ -143,20 +149,24 @@ pub async fn get_verifier_data(
 
     match call_result {
         Ok(result) => {
-            if result[0] == FieldElement::ZERO {
+            let social_id = if result[3] != FieldElement::ZERO {
+                result[3]
+            } else if result[5] != FieldElement::ZERO {
+                result[5]
+            } else {
                 return None;
-            }
-
-            match record_config.execute_handler(config, result[0]).await {
+            };
+            match record_config.execute_handler(config, social_id).await {
                 Ok(name) => Some(name),
                 Err(e) => {
                     println!("Error while executing handler: {:?}", e);
                     None
                 }
             }
+
         }
-        Err(e) => {
-            println!("Error while fetchingverifier data: {:?}", e);
+        Err(err) => {
+            println!("Error while fetching balances: {:?}", err);
             None
         }
     }

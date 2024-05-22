@@ -104,7 +104,7 @@ pub_struct!(Clone, Debug, Deserialize; Evm {
 pub struct OffchainResolvers(HashMap<String, OffchainResolver>);
 
 pub_struct!(Clone, Debug, Deserialize; EvmRecordVerifier {
-    verifier_contract: FieldElement,
+    verifier_contracts: Vec<FieldElement>,
     field: String,
     handler: HandlerType,
 });
