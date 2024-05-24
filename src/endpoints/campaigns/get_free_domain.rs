@@ -10,13 +10,11 @@ use serde::Deserialize;
 use serde_json::json;
 use starknet::core::types::FieldElement;
 use starknet_crypto::pedersen_hash;
-use starknet_id::encode;
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 #[derive(Deserialize)]
 pub struct FreeDomainQuery {
     addr: FieldElement,
-    domain: String,
     code: String,
 }
 
@@ -40,22 +38,15 @@ pub async fn handler(
         return get_error("Campaign not active".to_string());
     }
 
-    // assert domain is a root domain & not too long
-    let domain_parts = query.domain.split('.').collect::<Vec<&str>>();
-    if domain_parts.len() != 2 {
-        return get_error("Domain must be a root domain".to_string());
-    }
-    if domain_parts[0].len() < 5 {
-        return get_error("Domain too short".to_string());
-    }
-
     let free_domains = state
         .starknetid_db
-        .collection::<mongodb::bson::Document>("free_domains");
+        .collection::<mongodb::bson::Document>("free_domain_ticket");
     match free_domains
         .find_one(
             doc! {
                 "code" : &query.code,
+                "enabled": true,
+                "type": "5+letters",
             },
             None,
         )
@@ -68,14 +59,7 @@ pub async fn handler(
             }
 
             // generate the signature
-            let encoded_domain = encode(&domain_parts[0]).unwrap();
-            let message_hash = pedersen_hash(
-                &pedersen_hash(
-                    &pedersen_hash(&query.addr, &encoded_domain),
-                    &FieldElement::from_str(query.code.as_str()).unwrap(),
-                ),
-                &FREE_DOMAIN_STR,
-            );
+            let message_hash = pedersen_hash(&query.addr, &FREE_DOMAIN_STR);
             match ecdsa_sign(&state.conf.free_domains.priv_key.clone(), &message_hash) {
                 Ok(signature) => {
                     // we blacklist the coupon code
@@ -83,10 +67,11 @@ pub async fn handler(
                         .update_one(
                             doc! {
                                 "code" : &query.code,
+                                "type": "5+letters",
                             },
                             doc! {
                                 "$set" : {
-                                    "used" : true,
+                                    "spent" : true,
                                 },
                             },
                             None,
@@ -99,15 +84,13 @@ pub async fn handler(
                             Json(json!({
                                 "r": signature.r,
                                 "s": signature.s,
-                                "code": query.code,
-                                "domain_encoded": encoded_domain,
                             })),
                         )
                             .into_response(),
                         Err(e) => get_error(format!("Error while updating coupon code: {}", e)),
                     }
                 }
-                Err(e) => get_error(format!("Error while generating Starknet signature: {}", e)),
+                Err(e) => get_error(format!("Error while generating signature: {}", e)),
             }
         }
         _ => get_error("Coupon code not found".to_string()),
