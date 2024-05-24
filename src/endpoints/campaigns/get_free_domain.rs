@@ -53,9 +53,12 @@ pub async fn handler(
         .await
     {
         Ok(Some(doc)) => {
-            let used = doc.get_bool("used").unwrap();
-            if used {
-                return get_error("Coupon code already used".to_string());
+            if let Ok(spent) = doc.get_bool("spent") {
+                if spent {
+                    return get_error("Coupon code already used".to_string());
+                }
+            } else {
+                return get_error("Error while verifying coupon code availability".to_string());
             }
 
             // generate the signature
