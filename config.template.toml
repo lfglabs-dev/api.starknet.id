@@ -110,5 +110,3 @@ handler = "GetTwitterName"
 
 [free_domains]
 priv_key = "0xXXXXXXXXXXXX"
-start_time = 1716290276
-end_time = 1718986676
