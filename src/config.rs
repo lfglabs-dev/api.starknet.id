@@ -111,8 +111,6 @@ pub_struct!(Clone, Debug, Deserialize; EvmRecordVerifier {
 
 pub_struct!(Clone, Debug, Deserialize; FreeDomains {
     priv_key: FieldElement,
-    start_time: i64,
-    end_time: i64,
 });
 
 #[derive(Deserialize)]

@@ -6,7 +6,7 @@ use starknet::core::{
 };
 use starknet_crypto::{rfc6979_generate_k, sign, SignError};
 
-pub fn ecdsa_sign(
+pub fn non_determinist_ecdsa_sign(
     private_key: &FieldElement,
     message_hash: &FieldElement,
 ) -> Result<ExtendedSignature, EcdsaSignError> {
