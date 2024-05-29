@@ -107,3 +107,6 @@ handler = "GetGithubName"
 verifier_contracts = ["0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184"]
 field = "twitter"
 handler = "GetTwitterName"
+
+[free_domains]
+priv_key = "0xXXXXXXXXXXXX"

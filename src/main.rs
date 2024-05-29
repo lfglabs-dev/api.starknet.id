@@ -1,6 +1,7 @@
 #![recursion_limit = "256"]
 
 mod config;
+mod ecdsa_sign;
 mod endpoints;
 mod models;
 mod resolving;

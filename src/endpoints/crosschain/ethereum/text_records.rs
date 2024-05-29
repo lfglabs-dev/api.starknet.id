@@ -125,7 +125,8 @@ pub async fn get_verifier_data(
     id: FieldElement,
     record_config: &EvmRecordVerifier,
 ) -> Option<String> {
-    let mut calls: Vec<FieldElement> = vec![FieldElement::from(record_config.verifier_contracts.len())];
+    let mut calls: Vec<FieldElement> =
+        vec![FieldElement::from(record_config.verifier_contracts.len())];
     for verifier in &record_config.verifier_contracts {
         calls.push(config.contracts.starknetid);
         calls.push(selector!("get_verifier_data"));
@@ -160,7 +161,6 @@ pub async fn get_verifier_data(
                     None
                 }
             }
-
         }
         Err(err) => {
             println!("Error while fetching balances: {:?}", err);
