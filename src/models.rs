@@ -18,6 +18,7 @@ pub struct AppState {
     pub conf: Config,
     pub starknetid_db: Database,
     pub sales_db: Database,
+    pub free_domains_db: Database,
     pub states: States,
     pub dynamic_offchain_resolvers: Arc<Mutex<HashMap<String, OffchainResolver>>>,
 }

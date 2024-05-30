@@ -37,6 +37,10 @@ async fn main() {
     let sales_client_options = ClientOptions::parse(&conf.databases.sales.connection_string)
         .await
         .unwrap();
+    let free_domains_client_options =
+        ClientOptions::parse(&conf.databases.free_domains.connection_string)
+            .await
+            .unwrap();
 
     let states = tax::sales_tax::load_sales_tax().await;
     if states.states.is_empty() {
@@ -52,6 +56,9 @@ async fn main() {
         sales_db: Client::with_options(sales_client_options)
             .unwrap()
             .database(&conf.databases.sales.name),
+        free_domains_db: Client::with_options(free_domains_client_options)
+            .unwrap()
+            .database(&conf.databases.free_domains.name),
         states,
         dynamic_offchain_resolvers: Arc::new(Mutex::new(HashMap::new())),
     });
