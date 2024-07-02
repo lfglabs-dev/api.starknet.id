@@ -145,7 +145,7 @@ pub async fn handler(
                 description: "This token represents an identity on StarkNet.".to_string(),
                 image: match img_url {
                     Some(url) => url,
-                    None => format!("https://starknet.id/api/identicons/{}", &query.id),
+                    None => format!("https://identicon.starknet.id/{}", &query.id),
                 },
                 expiry: Some(expiry),
                 attributes: Some(vec![
@@ -171,7 +171,7 @@ pub async fn handler(
             let token_uri = TokenURI {
                 name: format!("Starknet ID: {}", &query.id),
                 description: "This token represents an identity on StarkNet.".to_string(),
-                image: format!("https://starknet.id/api/identicons/{}", &query.id),
+                image: format!("https://identicon.starknet.id/{}", &query.id),
                 expiry: None,
                 attributes: None,
             };
