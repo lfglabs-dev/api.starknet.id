@@ -43,7 +43,7 @@ pub async fn handler(
     let domain_len = domain_parts[0].len();
 
     let free_domains = state
-        .starknetid_db
+        .free_domains_db
         .collection::<mongodb::bson::Document>("free_domain_ticket");
     match free_domains
         .find_one(

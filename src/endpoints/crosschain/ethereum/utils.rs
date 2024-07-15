@@ -362,7 +362,7 @@ pub async fn get_profile_picture_uri(
     match uri {
         Some(u) if u.contains("base64") => Some(parse_base64_image(u)),
         Some(u) => Some(fetch_image_url(config, u).await),
-        None if use_default_pfp => Some(format!("https://starknet.id/api/identicons/{}", id)),
+        None if use_default_pfp => Some(format!("https://identicon.starknet.id/{}", id)),
         _ => None,
     }
 }
