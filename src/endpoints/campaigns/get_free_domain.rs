@@ -12,6 +12,8 @@ use starknet::core::types::FieldElement;
 use starknet_crypto::pedersen_hash;
 use std::sync::Arc;
 
+use crate::utils::to_hex;
+
 #[derive(Deserialize)]
 pub struct FreeDomainQuery {
     addr: FieldElement,
@@ -107,15 +109,59 @@ pub async fn handler(
                         )
                         .await
                     {
-                        Ok(_) => (
-                            // and return the signature
-                            StatusCode::OK,
-                            Json(json!({
-                                "r": signature.r,
-                                "s": signature.s,
-                            })),
-                        )
-                            .into_response(),
+                        Ok(_) => {
+                            // Request paymaster API to add reward to the user
+                            let api_url = format!(
+                                "{}/accounts/{}/rewards",
+                                state.conf.paymaster.api_url,
+                                to_hex(&query.addr)
+                            );
+                            let api_key = &state.conf.paymaster.api_key;
+                            let starknet_id_contract = &state.conf.contracts.starknetid;
+                            let free_domain_contract = &state.conf.contracts.free_domains;
+                            // Here you can add the actual request to the paymaster API
+                            let client = reqwest::Client::new();
+                            let res = client
+                                .post(&api_url)
+                                .header("api-key", api_key)
+                                .json(&json!({
+                                    "address": to_hex(&query.addr),
+                                    "campaign": "Free Domain",
+                                    "protocol": "STARKNETID",
+                                    "freeTx": 1,
+                                    "whitelistedCalls": [
+                                        {
+                                            "contractAddress": starknet_id_contract,
+                                            "entrypoint": "*"
+                                        },
+                                        {
+                                            "contractAddress": free_domain_contract,
+                                            "entrypoint": "*"
+                                        }
+                                    ]
+                                }))
+                                .send()
+                                .await;
+
+                            match res {
+                                Ok(response) if response.status().is_success() => (
+                                    StatusCode::OK,
+                                    Json(json!({
+                                        "r": signature.r,
+                                        "s": signature.s,
+                                    })),
+                                )
+                                    .into_response(),
+                                Ok(response) => get_error(format!(
+                                    "Paymaster API request failed with status: {}",
+                                    response.status()
+                                )),
+                                Err(e) => get_error(format!(
+                                    "Error while requesting Paymaster API: {}",
+                                    e
+                                )),
+                            }
+                        }
                         Err(e) => get_error(format!("Error while updating coupon code: {}", e)),
                     }
                 }
