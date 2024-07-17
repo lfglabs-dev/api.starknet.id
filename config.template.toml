@@ -20,6 +20,11 @@ old_verifier = "0xXXXXXXXXXXXX"
 pop_verifier = "0xXXXXXXXXXXXX"
 pp_verifier = "0xXXXXXXXXXXXX"
 argent_multicall = "0xXXXXXXXXXXXX"
+free_domains = "0xXXXXXXXXXXXX"
+
+[paymaster]
+api_key = "xxxxxx"
+api_url = "https://starknet.api.avnu.fi/paymaster/v1" # https://sepolia.api.avnu.fi/paymaster/v1 on testnet
 
 [variables]
 rpc_url = "xxxxxx"

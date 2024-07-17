@@ -39,6 +39,12 @@ pub_struct!(Clone, Deserialize; Contracts {
     pop_verifier: FieldElement,
     pp_verifier: FieldElement,
     argent_multicall: FieldElement,
+    free_domains: FieldElement,
+});
+
+pub_struct!(Clone, Deserialize; Paymaster {
+    api_key: String,
+    api_url: String,
 });
 
 pub_struct!(Clone, Deserialize; Starkscan {
@@ -120,6 +126,7 @@ struct RawConfig {
     databases: Databases,
     variables: Variables,
     contracts: Contracts,
+    paymaster: Paymaster,
     starkscan: Starkscan,
     custom_resolvers: HashMap<String, Vec<String>>,
     solana: Solana,
@@ -136,6 +143,7 @@ pub_struct!(Clone, Deserialize; Config {
     databases: Databases,
     variables: Variables,
     contracts: Contracts,
+    paymaster: Paymaster,
     starkscan: Starkscan,
     custom_resolvers: HashMap<String, Vec<String>>,
     reversed_resolvers: HashMap<String, String>,
@@ -254,6 +262,7 @@ impl From<RawConfig> for Config {
             databases: raw.databases,
             variables: raw.variables,
             contracts: raw.contracts,
+            paymaster: raw.paymaster,
             starkscan: raw.starkscan,
             custom_resolvers: raw.custom_resolvers,
             reversed_resolvers,
