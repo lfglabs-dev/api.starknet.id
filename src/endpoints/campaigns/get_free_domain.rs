@@ -131,11 +131,11 @@ pub async fn handler(
                                     "freeTx": 1,
                                     "whitelistedCalls": [
                                         {
-                                            "contractAddress": starknet_id_contract,
+                                            "contractAddress": to_hex(starknet_id_contract),
                                             "entrypoint": "*"
                                         },
                                         {
-                                            "contractAddress": free_domain_contract,
+                                            "contractAddress": to_hex(free_domain_contract),
                                             "entrypoint": "*"
                                         }
                                     ]
