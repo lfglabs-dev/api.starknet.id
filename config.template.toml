@@ -28,7 +28,7 @@ api_url = "https://starknet.api.avnu.fi/paymaster/v1" # https://sepolia.api.avnu
 
 [variables]
 rpc_url = "xxxxxx"
-refresh_delay = 60 # in seconds
+refresh_delay = 60                                  # in seconds
 ipfs_gateway = "https://gateway.pinata.cloud/ipfs/" # or https://ipfs.io/ipfs/
 discord_token = "xxxxxx"
 discord_api_url = "https://discord.com/api"
@@ -64,14 +64,14 @@ address = "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d"
 min_price = 500
 max_price = 5000
 decimals = 18
-max_quote_validity = 300 # it moves faster so we reduce the quote validity
+max_quote_validity = 300                                                                   # it moves faster so we reduce the quote validity
 auto_renew_contract = "0x078F63fcD145Ddc6ca932E562b466AFbfD7c9E882C9aa70f3e5b2ce05cD892eA"
 
 [altcoins.USDC]
 address = "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8"
 min_price = 2000
 max_price = 10000
-decimals = 6 # not sure really
+decimals = 6                                                                   # not sure really
 max_quote_validity = 600
 
 [altcoins.USDT]
@@ -86,9 +86,7 @@ max_quote_validity = 600
 [offchain_resolvers.NOTION]
 root_domain = "notion.stark"
 resolver_address = "0x153be68cf8fc71138610811dd2b4fa481eb99f3eedcb3fce7369569055be275"
-uri = [
-    "https://sepolia.api.ccip-demo.starknet.id/resolve?domain=",
-]
+uri = ["https://sepolia.api.ccip-demo.starknet.id/resolve?domain="]
 
 [evm]
 private_key = "0xXXXXXXXXXXXX"
@@ -102,17 +100,23 @@ arbitrum = 2147525809
 [evm_records_verifiers]
 
 [evm_records_verifiers."com.discord"]
-verifier_contracts = ["0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184"]
+verifier_contracts = [
+    "0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184",
+]
 field = "discord"
 handler = "GetDiscordName"
 
 [evm_records_verifiers."com.github"]
-verifier_contracts = ["0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184"]
+verifier_contracts = [
+    "0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184",
+]
 field = "github"
 handler = "GetGithubName"
 
 [evm_records_verifiers."com.twitter"]
-verifier_contracts = ["0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184"]
+verifier_contracts = [
+    "0x0182EcE8173C216A395f4828e1523541b7e3600bf190CB252E1a1A0cE219d184",
+]
 field = "twitter"
 handler = "GetTwitterName"
 
