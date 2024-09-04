@@ -32,16 +32,17 @@ pub struct AddrToDomainQuery {
 }
 
 async fn read_cursor(mut cursor: Cursor<Document>) -> Result<AddrToDomainData> {
-    while let Some(result) = cursor.next().await {
+    if let Some(result) = cursor.next().await {
         let doc = result?;
         let domain = doc.get_str("domain").unwrap_or_default().to_owned();
         let domain_expiry = doc.get_i64("domain_expiry").ok();
-        return Ok(AddrToDomainData {
+        Ok(AddrToDomainData {
             domain,
             domain_expiry,
-        });
+        })
+    } else {
+        bail!("No document found for the given address")
     }
-    bail!("No document found for the given address")
 }
 
 async fn aggregate_data(
