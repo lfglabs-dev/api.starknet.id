@@ -58,9 +58,16 @@ pub async fn handler(
         Ok(Some(doc)) => {
             if let Ok(spent) = doc.get_bool("spent") {
                 if spent {
-                    return get_error("Coupon code already used".to_string());
+                    if let Ok(spent_by) = doc.get_str("spent_by") {
+                        if (spent_by != to_hex(&query.addr)) {
+                            return get_error(format!("Coupon code already used by {}\nIf you own this account, this means you have already used this coupon code with the other account. Please switch to it.", spent_by));
+                        }
+                    } else {
+                        return get_error("Coupon code already used by someone else".to_string());
+                    }
                 }
             } else {
+                println!("Error while verifying coupon code spent status and user address");
                 return get_error("Error while verifying coupon code availability".to_string());
             }
 
@@ -103,6 +110,7 @@ pub async fn handler(
                             doc! {
                                 "$set" : {
                                     "spent" : true,
+                                    "spent_by" : to_hex(&query.addr),
                                 },
                             },
                             None,
