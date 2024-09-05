@@ -149,8 +149,9 @@ pub async fn handler(
                     let pipeline = [
                         doc! {
                             "$match": doc! {
-                                "_cursor.to": null,
-                                "domain": query.domain.clone()
+                                "_cursor. to": null,
+                                "resolver" : null,
+                                "domain": query.domain.clone(),
                             }
                         },
                         doc! {
@@ -268,24 +269,19 @@ pub async fn handler(
                         .map_err(|_| "Error while executing aggregation pipeline");
 
                     match cursor {
-                        Ok(mut cursor) => {
-                            while let Some(result) = cursor.next().await {
-                                return match result {
-                                    Ok(doc) => {
-                                        let addr =
-                                            doc.get_str("addr").unwrap_or_default().to_owned();
-                                        let domain_expiry = doc.get_i64("domain_expiry").ok();
-                                        let data = DomainToAddrData {
-                                            addr,
-                                            domain_expiry,
-                                        };
-                                        (StatusCode::OK, Json(data)).into_response()
-                                    }
-                                    Err(e) => get_error(format!("Error calling the db: {}", e)),
+                        Ok(mut cursor) => match cursor.next().await {
+                            Some(Ok(doc)) => {
+                                let addr = doc.get_str("addr").unwrap_or_default().to_owned();
+                                let domain_expiry = doc.get_i64("domain_expiry").ok();
+                                let data = DomainToAddrData {
+                                    addr,
+                                    domain_expiry,
                                 };
+                                (StatusCode::OK, Json(data)).into_response()
                             }
-                            return get_error("No document found for the given domain".to_string());
-                        }
+                            Some(Err(e)) => get_error(format!("Error calling the db: {}", e)),
+                            None => get_error("No document found for the given domain".to_string()),
+                        },
                         Err(e) => get_error(format!("Error accessing the database: {}", e)),
                     }
                 }
