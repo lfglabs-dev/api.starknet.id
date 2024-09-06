@@ -59,7 +59,18 @@ pub async fn handler(
             if let Ok(spent) = doc.get_bool("spent") {
                 if spent {
                     if let Ok(spent_by) = doc.get_str("spent_by") {
-                        if (spent_by != to_hex(&query.addr)) {
+                        if (spent_by == to_hex(&query.addr)) {
+                            let r = doc.get_str("r").unwrap();
+                            let s = doc.get_str("s").unwrap();
+                            return (
+                                StatusCode::OK,
+                                Json(json!({
+                                    "r": r,
+                                    "s": s,
+                                })),
+                            )
+                                .into_response();
+                        } else {
                             return get_error(format!("Coupon code already used by {}\nIf you own this account, this means you have already used this coupon code with the other account. Please switch to it.", spent_by));
                         }
                     } else {
@@ -111,6 +122,8 @@ pub async fn handler(
                                 "$set" : {
                                     "spent" : true,
                                     "spent_by" : to_hex(&query.addr),
+                                    "r" : signature.r.to_string(),
+                                    "s" : signature.s.to_string(),
                                 },
                             },
                             None,
