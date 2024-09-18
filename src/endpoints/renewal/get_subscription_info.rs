@@ -56,7 +56,7 @@ pub async fn handler(
     let pipeline = vec![
         doc! {
             "$match": doc! {
-                "owner": to_hex(&query.addr),
+                "owner": &addr,
                 "_cursor.to": null
             }
         },
@@ -101,6 +101,7 @@ pub async fn handler(
                             "$expr": doc! {
                                 "$eq": ["$domain", "$$domain_name"]
                             },
+                            "renewer_address": &addr,
                             "_cursor.to": null
                         }
                     }
@@ -124,6 +125,7 @@ pub async fn handler(
                             "$expr": doc! {
                                 "$eq": ["$domain", "$$domain_name"]
                             },
+                            "renewer_address": &addr,
                             "_cursor.to": null
                         }
                     }
