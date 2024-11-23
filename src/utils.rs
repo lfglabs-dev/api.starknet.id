@@ -60,26 +60,70 @@ pub fn to_hex(felt: &FieldElement) -> String {
     result
 }
 
+/// Converts a pair of hexadecimal strings representing low and high bits into a BigInteger256
+/// This function is specifically designed to handle Starknet's uint256 type representation,
+/// where a 256-bit integer is split into two 128-bit parts
+///
+/// # Arguments
+///
+/// * `low` - A string slice containing the hexadecimal representation of the lower 128 bits
+///          Must be prefixed with "0x"
+/// * `high` - A string slice containing the hexadecimal representation of the higher 128 bits
+///          Must be prefixed with "0x"
+///
+/// # Returns
+///
+/// * `BigInteger256` - A 256-bit integer combining both low and high components
+///
+/// # Example
+///
+/// ```rust
+/// let low = "0x000000000000000000000000000000001";
+/// let high = "0x000000000000000000000000000000000";
+/// let result = to_u256(low, high);
 pub fn to_u256(low: &str, high: &str) -> BigInteger256 {
+    /// Helper function that converts a byte slice into a BigInteger256
+    /// Uses a bit-by-bit conversion approach for precise control
+    ///
+    /// # Arguments
+    ///
+    /// * `bytes` - Slice of bytes to convert
+    ///
+    /// # Returns
+    ///
+    /// * `Option<BigInteger256>` - Some(BigInteger256) if conversion successful, None if input too large
     fn from_byte_slice(bytes: &[u8]) -> Option<BigInteger256> {
+        // Ensure input doesn't exceed 32 bytes (256 bits)
         if bytes.len() > 32 {
-            return None; // Ensure the byte slice isn't larger than expected
+            return None;
         }
 
+        // Create an array of 256 bits, initialized to false
         let mut bits = [false; 256];
+
+        // Convert each byte into its constituent bits
+        // Iterates through each byte and its 8 bits
         for (ind_byte, byte) in bytes.iter().enumerate() {
             for ind_bit in 0..8 {
+                // Convert byte to bits, storing them in big-endian order
+                // Uses bit shifting and masking to extract each bit
                 bits[ind_byte * 8 + ind_bit] = (byte >> (7 - ind_bit)) & 1 == 1;
             }
         }
 
+        // Create BigInteger256 from the bits array in big-endian order
         Some(BigInteger256::from_bits_be(&bits))
     }
 
+    // Convert the hexadecimal strings to BigInteger256 values
+    // Strip "0x" prefix before conversion
     let mut output = from_byte_slice(&hex::decode(&(low)[2..]).unwrap()).unwrap();
     let mut _high = from_byte_slice(&hex::decode(&(high)[2..]).unwrap()).unwrap();
 
+    // Shift high bits left by 128 positions
     _high.muln(128);
+
+    // Combine high and low bits using addition
     let _ = output.add_with_carry(&_high);
     output
 }
