@@ -30,7 +30,7 @@ pub async fn handler(
     let update_options = UpdateOptions::builder().upsert(true).build();
 
     let today = Utc::now().date_naive().and_hms_opt(0, 0, 0).unwrap();
-    let today_bson = BsonDateTime::from_millis(today.timestamp() * 1000);
+    let today_bson = BsonDateTime::from_millis(today.and_utc().timestamp() * 1000);
 
     let result = sponsor_usage
         .update_one(

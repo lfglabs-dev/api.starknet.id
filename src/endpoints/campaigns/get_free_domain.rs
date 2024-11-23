@@ -59,7 +59,7 @@ pub async fn handler(
             if let Ok(spent) = doc.get_bool("spent") {
                 if spent {
                     if let Ok(spent_by) = doc.get_str("spent_by") {
-                        if (spent_by == to_hex(&query.addr)) {
+                        if spent_by == to_hex(&query.addr) {
                             let r = doc.get_str("r").unwrap();
                             let s = doc.get_str("s").unwrap();
                             return (
