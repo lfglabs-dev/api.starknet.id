@@ -37,17 +37,17 @@ pub async fn handler(
     let mut output = Data { counts: vec![] };
     let mut i = 0;
     loop {
-        let start_date_time = DateTime::from_timestamp(
+        let start_time = DateTime::from_timestamp(
             query.since_date + i * query.spacing,
             0
         ).unwrap();
-        let start_time = start_date_time;
+       
 
-        let end_date_time = DateTime::from_timestamp(
+        let end_time = DateTime::from_timestamp(
             query.since_date + (i + 1) * query.spacing,
             0
         ).unwrap();
-        let end_time = end_date_time;
+      
 
         let documents = referral_revenues.find(
             doc! {
