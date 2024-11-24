@@ -24,6 +24,9 @@ lazy_static::lazy_static! {
     pub static ref ROUTE_REGISTRY: Mutex<Vec<Box<dyn WithState>>> = Mutex::new(Vec::new());
 }
 
+#[cfg(test)]
+mod tests;
+
 #[tokio::main]
 async fn main() {
     println!("starknetid_server: starting v{}", env!("CARGO_PKG_VERSION"));
