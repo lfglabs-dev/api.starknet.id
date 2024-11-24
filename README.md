@@ -1,10 +1,6 @@
-# StarknetID API
-
-StarknetID API is a Rust-based service that provides API endpoints for interacting with StarkNet identities. This API serves as the backend infrastructure for StarkNet identity management and resolution.
-
 ## Description
 
-The StarknetID API is designed to handle identity-related operations on the StarkNet blockchain. It provides a robust interface for managing and querying StarkNet identities, making it easier to integrate identity services into applications built on StarkNet.
+StarknetID provides a robust interface for managing and querying StarkNet identities, making it easier to integrate identity services into applications built on StarkNet.
 
 ## Features
 
@@ -118,9 +114,6 @@ We welcome contributions to the StarknetID API! To keep our workflow smooth, ple
    - Push to your branch
    - Create a Pull Request
 
-Thank you for your contribution! 🙏
-
-⚠️ **WARNING**: Failure to follow the requirements above may result in being added to the OnlyDust blacklist, affecting your ability to receive future rewards.
 
 ## License
 
