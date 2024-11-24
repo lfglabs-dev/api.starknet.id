@@ -17,24 +17,30 @@ The StarknetID API is designed to handle identity-related operations on the Star
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:
-- Rust (latest stable version)
-- Docker and Docker Compose
-- Git
+- Rust (latest stable version) [Rust Installation Guide](https://doc.rust-lang.org/book/ch01-01-installation.html)
+- Docker and Docker Compose [Docker Installation Guide](https://docs.docker.com/get-started/get-docker/)
+- Git [Git Installation Guide](https://git-scm.com/downloads)
 
 ## Installation
+1. Fork the repo
 
-1. Clone the repository:
+2. Clone the forked repository:
 ```bash
-git clone https://github.com/lfglabs-dev/api.starknet.id.git
+git clone git clone https://github.com/<your-user>/api.starknet.id.git
 cd api.starknet.id
 ```
 
-2. Build the project:
+3. Create Branch
+```bash
+git checkout -b fix-[issue-number]
+```
+
+4. Build the project:
 ```bash
 cargo build
 ```
 
-3. Set up environment variables:
+5. Set up environment variables:
    - Copy the template configuration file:
    ```bash
    cp config.template.toml config.toml
