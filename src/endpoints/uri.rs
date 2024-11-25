@@ -8,7 +8,7 @@ use axum::{
     response::{IntoResponse, Json},
 };
 use axum_auto_routes::route;
-use chrono::NaiveDateTime;
+use chrono::DateTime;
 use futures::StreamExt;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
@@ -155,7 +155,7 @@ pub async fn handler(
                     },
                     Attribute {
                         trait_type: "Domain expiry".to_string(),
-                        value: vec![NaiveDateTime::from_timestamp_opt(expiry.into(), 0)
+                        value: vec![DateTime::from_timestamp(expiry.into(), 0)
                             .map(|dt| dt.format("%b %d, %Y").to_string())
                             .unwrap_or_else(|| "Invalid date".into())],
                     },

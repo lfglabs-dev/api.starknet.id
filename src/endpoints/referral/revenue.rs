@@ -1,14 +1,14 @@
-use crate::{models::AppState, utils::get_error};
+use crate::{ models::AppState, utils::get_error };
 use axum::{
-    extract::{Query, State},
-    http::{HeaderMap, HeaderValue, StatusCode},
-    response::{IntoResponse, Json},
+    extract::{ Query, State },
+    http::{ HeaderMap, HeaderValue, StatusCode },
+    response::{ IntoResponse, Json },
 };
 use axum_auto_routes::route;
-use chrono::{NaiveDateTime, TimeZone, Utc};
+use chrono::{ Utc, DateTime };
 use futures::StreamExt;
-use mongodb::bson::{doc, Bson, DateTime as BsonDateTime};
-use serde::{Deserialize, Serialize};
+use mongodb::bson::{ doc, Bson, DateTime as BsonDateTime };
+use serde::{ Deserialize, Serialize };
 use std::sync::Arc;
 
 #[derive(Serialize)]
@@ -26,30 +26,31 @@ pub struct IdQuery {
 #[route(get, "/referral/revenue", crate::endpoints::referral::revenue)]
 pub async fn handler(
     State(state): State<Arc<AppState>>,
-    Query(query): Query<IdQuery>,
+    Query(query): Query<IdQuery>
 ) -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
 
-    let referral_revenues = state
-        .starknetid_db
-        .collection::<mongodb::bson::Document>("referral_revenues");
+    let referral_revenues =
+        state.starknetid_db.collection::<mongodb::bson::Document>("referral_revenues");
 
     let mut output = Data { revenues: vec![] };
     let mut i = 0;
     loop {
-        let start_naive_dt =
-            NaiveDateTime::from_timestamp_opt(query.since_date + i * query.spacing, 0).unwrap();
-        let start_time = Utc.from_utc_datetime(&start_naive_dt);
+        let start_time = DateTime::from_timestamp(
+            query.since_date + i * query.spacing,
+            0
+        ).unwrap();
+        
 
-        let end_naive_dt =
-            NaiveDateTime::from_timestamp_opt(query.since_date + (i + 1) * query.spacing, 0)
-                .unwrap();
-        let end_time = Utc.from_utc_datetime(&end_naive_dt);
+        let end_time = DateTime::from_timestamp(
+            query.since_date + (i + 1) * query.spacing,
+            0
+        ).unwrap();
+       
 
-        let documents = referral_revenues
-            .find(
-                doc! {
+        let documents = referral_revenues.find(
+            doc! {
                     "sponsor_addr": &query.sponsor,
                     "amount": { "$gt": 0 },
                     "timestamp": {
@@ -58,9 +59,8 @@ pub async fn handler(
                     },
                     "_cursor.to": Bson::Null,
                 },
-                None,
-            )
-            .await;
+            None
+        ).await;
 
         let mut sum = 0;
 
@@ -73,7 +73,9 @@ pub async fn handler(
                     }
                 }
             }
-            Err(e) => return get_error(format!("Error while fetching from database: {:?}", e)),
+            Err(e) => {
+                return get_error(format!("Error while fetching from database: {:?}", e));
+            }
         }
 
         output.revenues.push(sum);
