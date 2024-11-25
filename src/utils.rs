@@ -166,4 +166,3 @@ pub async fn fetch_image_url(config: &Config, url: &str) -> String {
         Err(_) => "Error fetching data".to_string(),
     }
 }
-git 
