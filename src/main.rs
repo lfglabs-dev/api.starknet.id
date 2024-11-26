@@ -3,10 +3,12 @@
 mod config;
 mod ecdsa_sign;
 mod endpoints;
+mod logger;
 mod models;
 mod resolving;
 mod tax;
 mod utils;
+
 use axum::{http::StatusCode, Router};
 use axum_auto_routes::route;
 use mongodb::{bson::doc, options::ClientOptions, Client};
@@ -31,6 +33,22 @@ mod tests;
 async fn main() {
     println!("starknetid_server: starting v{}", env!("CARGO_PKG_VERSION"));
     let conf = config::load();
+
+    let logger = logger::Logger::new(&conf.watchtower);
+
+    // Testing logger when server started
+    logger.info(format!(
+        "id_server: starting v{}",
+        env!("CARGO_PKG_VERSION")
+    ));
+    logger.warning(format!(
+        "id_server: starting v{}",
+        env!("CARGO_PKG_VERSION")
+    ));
+    logger.severe(format!(
+        "id_server: starting v{}",
+        env!("CARGO_PKG_VERSION")
+    ));
 
     let starknetid_client_options =
         ClientOptions::parse(&conf.databases.starknetid.connection_string)

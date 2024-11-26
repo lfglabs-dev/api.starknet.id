@@ -136,6 +136,7 @@ struct RawConfig {
     evm_networks: HashMap<String, u64>,
     evm_records_verifiers: HashMap<String, EvmRecordVerifier>,
     free_domains: FreeDomains,
+    watchtower: Watchtower,
 }
 
 pub_struct!(Clone, Deserialize; Config {
@@ -155,6 +156,21 @@ pub_struct!(Clone, Deserialize; Config {
     evm_records_verifiers: HashMap<String, EvmRecordVerifier>,
     subscription_to_altcoin: HashMap<FieldElement, String>,
     free_domains: FreeDomains,
+    watchtower: Watchtower,
+});
+
+pub_struct!(Clone, Deserialize; Watchtower {
+    enabled : bool,
+    endpoint: String,
+    app_id: String,
+    token: String,
+    types: WatchtowerTypes,
+});
+
+pub_struct!(Clone, Deserialize; WatchtowerTypes {
+    info: String,
+    warning: String,
+    severe: String,
 });
 
 impl Altcoins {
@@ -274,6 +290,7 @@ impl From<RawConfig> for Config {
             evm_records_verifiers: raw.evm_records_verifiers,
             subscription_to_altcoin,
             free_domains: raw.free_domains,
+            watchtower: raw.watchtower,
         }
     }
 }
