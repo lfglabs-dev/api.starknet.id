@@ -18,3 +18,4 @@ pub mod renewal;
 pub mod starkscan;
 pub mod stats;
 pub mod uri;
+pub mod get_expiring_domains;
