@@ -59,8 +59,8 @@ pub async fn handler(
             while let Some(doc_result) = cursor.next().await {
                 match doc_result {
                     Ok(doc) => {
-                        if let (Ok(domain), Ok(address)) = (doc.get_str("domain"), doc.get_str("address")) {
-                            ids.push(IdDetails { addr: address.to_string(), domain: domain.to_string() });
+                        if let (Ok(domain), Ok(legacy_address)) = (doc.get_str("domain"), doc.get_str("address")) {
+                            ids.push(IdDetails { addr: legacy_address.to_string(), domain: domain.to_string() });
                         }
                     }
                     Err(_) => {
