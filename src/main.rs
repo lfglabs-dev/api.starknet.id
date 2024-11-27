@@ -41,14 +41,6 @@ async fn main() {
         "id_server: starting v{}",
         env!("CARGO_PKG_VERSION")
     ));
-    logger.warning(format!(
-        "id_server: starting v{}",
-        env!("CARGO_PKG_VERSION")
-    ));
-    logger.severe(format!(
-        "id_server: starting v{}",
-        env!("CARGO_PKG_VERSION")
-    ));
 
     let starknetid_client_options =
         ClientOptions::parse(&conf.databases.starknetid.connection_string)
