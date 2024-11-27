@@ -12,6 +12,16 @@ connection_string = "xxxxxx"
 name = "sepolia_free_domains"
 connection_string = "xxxxxx"
 
+[watchtower]
+endpoint = "https://api.watchtower.starknet.id/service/add_message"
+app_id = "XXXXXXXXXXXXXXXXX"
+token = "XXXXXXXXXXXXXXXXX"
+enabled = true
+[watchtower.types]
+info = "goerli/info"
+warning = "goerli/warning"
+severe = "goerli/severe"
+
 [contracts]
 starknetid = "0xXXXXXXXXXXXX"
 naming = "0xXXXXXXXXXXXX"
