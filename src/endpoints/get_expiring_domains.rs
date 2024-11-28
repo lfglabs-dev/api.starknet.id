@@ -40,7 +40,10 @@ pub async fn handler(
     let pipeline = vec![
         doc! {
             "$match": {
-                "expiry": { "$lt": one_week_later },
+                "expiry": { 
+                    "$lt": one_week_later,
+                    "$gt": current_time
+             },
                 "_cursor.to": null
             }
         },
