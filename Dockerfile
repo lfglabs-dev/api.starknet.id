@@ -1,4 +1,4 @@
-FROM rust:1.75
+FROM rust:1.80
 
 WORKDIR /app
 
