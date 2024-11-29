@@ -1,4 +1,5 @@
-use crate::utils::extract_prefix_and_root;
+use crate::utils::{extract_prefix_and_root, to_u256};
+use ark_ff::{biginteger::BigInteger256, BigInteger};
 
 #[cfg(test)]
 mod extract_prefix_and_root {
@@ -65,5 +66,45 @@ mod extract_prefix_and_root {
         let (prefix, root) = extract_prefix_and_root("sub.例子.com".to_string());
         assert_eq!(prefix, "sub.");
         assert_eq!(root, "例子.com");
+    }
+}
+
+#[cfg(test)]
+mod to_u256 {
+    use super::*;
+
+    #[test]
+    fn test_to_u256_valid_inputs() {
+        let low = "0x00000000000000000000000000000001";
+        let high = "0x00000000000000000000000000000000";
+
+        let result = to_u256(low, high);
+        
+        // Check if the result is within the valid range
+        let min_value = BigInteger256::from_bits_be(&[false; 256][..]);
+        let max_value = BigInteger256::from_bits_be(&[true; 256][..]);
+        
+        assert!(result >= min_value);
+        assert!(result <= max_value);
+    }
+
+    #[test]
+    fn test_to_u256_invalid_inputs() {
+        let low = "invalid hex";
+        let high = "0x00000000000000000000000000000000";
+
+        let result = std::panic::catch_unwind(||to_u256(low, high));
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_to_u256_edge_cases() {
+        let low = "0x0000000000000000";
+        let high = "0x0000000000000001";
+
+        let result = to_u256(low, high);
+        
+        assert_eq!(result, BigInteger256::from_bits_be(&[false; 32][..]));
     }
 }
