@@ -107,4 +107,14 @@ mod to_u256 {
         
         assert_eq!(result, BigInteger256::from_bits_be(&[false; 32][..]));
     }
+
+    #[test]
+    fn test_to_u256_zero_value() {
+        let low = "0x0000000000000000";
+        let high = "0x0000000000000000";
+
+        let result = to_u256(low, high);
+        
+        assert_eq!(result, BigInteger256::from_bits_be(&[false; 32][..]));
+    }
 }
