@@ -1,7 +1,4 @@
-version: '3'
-
 services:
-
   starknetid_server:
     container_name: starknetid_server
     build: .

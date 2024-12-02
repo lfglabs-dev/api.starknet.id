@@ -1,0 +1,48 @@
+# This compose manages:
+# api.starknet.id backend: https://github.com/lfglabs-dev/api.starknet.id
+# starknetid verifier backend: https://github.com/lfglabs-dev/verifier_server
+# auto_renew bot backend: https://github.com/lfglabs-dev/auto_renew_bot
+
+services:
+  starknetid_server:
+    container_name: starknetid_server
+    build: .
+    command: ./target/release/starknetid_server
+    restart: always
+    ports:
+      - 8080:8080
+
+  starknetid_verifier:
+    container_name: starknetid_verifier
+    build:
+      context: ../verifier_server
+      dockerfile: ./Dockerfile
+    command: python -u verifier
+    restart: always
+    ports:
+      - 8083:8083
+
+  auto_renew_bot:
+    container_name: auto_renew_bot
+    build:
+      context: ../auto_renew_bot
+      dockerfile: ./bot/Dockerfile
+    restart: "no"
+
+  nginx:
+    depends_on:
+      - starknetid_server
+      - starknetid_verifier
+    image: valian/docker-nginx-auto-ssl
+    restart: on-failure
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ssl_data:/etc/resty-auto-ssl
+    environment:
+      ALLOWED_DOMAINS: "api.starknet.id,verifier.starknet.id"
+      SITES: "api.starknet.id=starknetid_server:8080;verifier.starknet.id=starknetid_verifier:8083"
+
+volumes:
+  ssl_data:
