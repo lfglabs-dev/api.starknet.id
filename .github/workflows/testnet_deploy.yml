@@ -36,7 +36,7 @@ jobs:
             if [ -d "\$REPO_PATH/.git" ]; then
               echo "Repository exists, pulling changes..."
               cd \$REPO_PATH
-              sudo docker-compose down
+              sudo docker compose down
               git reset --hard HEAD
               git pull
             else
@@ -51,5 +51,6 @@ jobs:
             sudo chmod -R 755 \$REPO_PATH
             aws s3 cp s3://$AWS_PATH/ \$REPO_PATH --recursive
 
-            sudo docker-compose up --build -d
+            # Use docker compose
+            sudo docker compose up --build -d
           EOF
