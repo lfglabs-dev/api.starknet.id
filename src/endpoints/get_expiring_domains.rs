@@ -1,7 +1,4 @@
-use crate::{
-    models::AppState,
-    utils::get_error,
-};
+use crate::{models::AppState, utils::get_error};
 use axum::{
     extract::State,
     http::{HeaderMap, HeaderValue, StatusCode},
@@ -10,13 +7,15 @@ use axum::{
 use axum_auto_routes::route;
 use futures::StreamExt;
 use mongodb::bson::{doc, Document};
-use std::sync::Arc;
 use serde::Serialize;
+use std::sync::Arc;
 
 #[derive(Serialize)]
 struct IdDetails {
     addr: String,
     domain: String,
+    id: String,
+    expiry: i64,
 }
 
 #[derive(Serialize)]
@@ -25,9 +24,7 @@ pub struct ExpiringDomains {
 }
 
 #[route(get, "/get_expiring_domains", crate::endpoints::get_expiring_domains)]
-pub async fn handler(
-    State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+pub async fn handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
 
@@ -40,7 +37,7 @@ pub async fn handler(
     let pipeline = vec![
         doc! {
             "$match": {
-                "expiry": { 
+                "expiry": {
                     "$lt": one_week_later,
                     "$gt": current_time
              },
@@ -51,6 +48,8 @@ pub async fn handler(
             "$project": {
                 "domain": 1,
                 "legacy_address": 1,
+                "id": 1,
+                "expiry": 1,
             }
         },
     ];
@@ -62,8 +61,18 @@ pub async fn handler(
             while let Some(doc_result) = cursor.next().await {
                 match doc_result {
                     Ok(doc) => {
-                        if let (Ok(domain), Ok(address)) = (doc.get_str("domain"), doc.get_str("legacy_address")) {
-                            ids.push(IdDetails { addr: address.to_string(), domain: domain.to_string() });
+                        if let (Ok(domain), Ok(address), Ok(id), Ok(expiry)) = (
+                            doc.get_str("domain"),
+                            doc.get_str("legacy_address"),
+                            doc.get_str("id"),
+                            doc.get_i64("expiry"),
+                        ) {
+                            ids.push(IdDetails {
+                                addr: address.to_string(),
+                                domain: domain.to_string(),
+                                id: id.to_string(),
+                                expiry,
+                            });
                         }
                     }
                     Err(_) => {
