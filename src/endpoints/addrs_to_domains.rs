@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 use std::sync::Arc;
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 struct AddrToDomainData {
     domain: Option<String>,
     address: String,
@@ -134,36 +134,180 @@ fn create_normal_pipeline(addresses: &[String]) -> Vec<Document> {
             "from": "id_owners",
             "let": { "rev_address": "$rev_address" },
             "pipeline": [
-                 { "$match": {
-                    "id" : {
-                        "$ne" : null
-                      },
-                  "$or": [
-                    { "_cursor.to": null },
-                    { "_cursor.to": { "$exists": false } }
-                ],
-                    "$expr": { "$eq": ["$owner", "$$rev_address"] }
-                } }
+                doc! { "$match": doc! {
+                        "id" : {
+                            "$ne" : null
+                        },
+                    "$or": [
+                        { "_cursor.to": null },
+                        { "_cursor.to": { "$exists": false } }
+                    ],
+                        "$expr": { "$eq": ["$owner", "$$rev_address"] }
+                    }
+                }
             ],
             "as": "identity"
         }},
-        doc! { "$unwind": "$identity" },
-        doc! { "$lookup": {
-            "from": "id_user_data",
-            "let": { "id": "$identity.id" },
-            "pipeline": [
-                doc! { "$match": {
-                    "_cursor.to": { "$exists": false },
-                    "field": "0x000000000000000000000000000000000000000000000000737461726b6e6574",
-                    "$expr": { "$eq": ["$id", "$$id"] }
-                } }
-            ],
-            "as": "starknet_data"
-        }},
-        doc! { "$unwind": "$starknet_data" },
-        doc! { "$match": {
-            "$expr": { "$eq": ["$rev_address", "$starknet_data.data"] }
-        }},
+        doc! {
+            "$unwind": doc! {
+                "path": "$identity",
+                "preserveNullAndEmptyArrays": true
+            }
+        },
+        doc! {
+            "$lookup": doc! {
+                "from": "id_user_data",
+                "let": doc! { "id": "$identity.id" },
+                "pipeline": [
+                    doc! { "$match": doc! {
+                        "_cursor.to": doc! { "$exists": false },
+                        "field": "0x000000000000000000000000000000000000000000000000737461726b6e6574",
+                        "$expr": { "$eq": ["$id", "$$id"] }
+                    } }
+                ],
+                "as": "starknet_data"
+            }
+        },
+        doc! {
+            "$unwind": doc! {
+                "path": "$starknet_data",
+                "preserveNullAndEmptyArrays": true
+            }
+        },
+        doc! {
+            "$lookup": doc! {
+                "from": "domains",
+                "let": doc! {
+                    "root_domain": doc! {
+                        "$reduce": doc! {
+                            "input": doc! {
+                                "$slice": [
+                                    doc! {
+                                        "$split": [
+                                            "$domain",
+                                            "."
+                                        ]
+                                    },
+                                    1,
+                                    10
+                                ]
+                            },
+                            "initialValue": "",
+                            "in": doc! {
+                                "$cond": doc! {
+                                    "if": doc! {
+                                        "$eq": [
+                                            "$$value",
+                                            ""
+                                        ]
+                                    },
+                                    "then": "$$this",
+                                    "else": doc! {
+                                        "$concat": [
+                                            "$$value",
+                                            ".",
+                                            "$$this"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "pipeline": [
+                    doc! {
+                        "$match": doc! {
+                            "_cursor.to": null,
+                            "$expr": doc! {
+                                "$eq": [
+                                    "$domain",
+                                    "$$root_domain"
+                                ]
+                            }
+                        }
+                    },
+                    doc! {
+                        "$project": doc! {
+                            "domain": 1,
+                            "resolver": 1
+                        }
+                    }
+                ],
+                "as": "root_domain"
+            }
+        },
+        doc! {
+            "$unwind": doc! {
+                "path": "$root_domain",
+                "preserveNullAndEmptyArrays": true
+            }
+        },
+        doc! {
+            "$lookup": doc! {
+                "from": "custom_resolutions",
+                "let": doc! {
+                    "rev_address": "$rev_address",
+                    "resolver": "$root_domain.resolver"
+                },
+                "pipeline": [
+                    doc! {
+                        "$match": doc! {
+                            "$expr": doc! {
+                                "$and": [
+                                    doc! {
+                                        "$eq": [
+                                            "$field",
+                                            "0x000000000000000000000000000000000000000000000000737461726b6e6574"
+                                        ]
+                                    },
+                                    doc! {
+                                        "$eq": [
+                                            "$value",
+                                            "$$rev_address"
+                                        ]
+                                    },
+                                    doc! {
+                                        "$eq": [
+                                            "$resolver",
+                                            "$$resolver"
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                ],
+                "as": "custom_resolution"
+            }
+        },
+        doc! {
+            "$unwind": doc! {
+                "path": "$custom_resolution",
+                "preserveNullAndEmptyArrays": true
+            }
+        },
+        doc! {
+            "$match": doc! {
+                "$or": [
+                    doc! {
+                        "$expr": doc! {
+                            "$eq": [
+                                "$rev_address",
+                                "$starknet_data.data"
+                            ]
+                        }
+                    },
+                    doc! {
+                        "$expr": doc! {
+                            "$eq": [
+                                "$rev_address",
+                                "$custom_resolution.value"
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
         doc! { "$project": {
             "domain": 1,
             "address" : "$rev_address",
@@ -186,7 +330,7 @@ fn create_fallback_pipeline(fallback_addresses: &[String]) -> Vec<Document> {
                 "let": { "id": "$id" },
                 "pipeline": [
                     doc! { "$match": {
-                        "_cursor.to": { "$exists": false },
+                        "_cursor.to": null,
                         "$expr": { "$eq": ["$id", "$$id"] }
                     } }
                 ],
