@@ -93,7 +93,7 @@ mod to_u256 {
         let low = "invalid hex";
         let high = "0x00000000000000000000000000000000";
 
-        let result = std::panic::catch_unwind(|| to_u256(low, high));
+        let result = std::panic::catch_unwind(||to_u256(low, high));
 
         assert!(result.is_err());
     }
