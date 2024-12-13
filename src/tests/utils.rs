@@ -1,4 +1,4 @@
-use crate::utils::{extract_prefix_and_root, to_u256};
+use crate::utils::{clean_string, extract_prefix_and_root, to_u256};
 use ark_ff::{biginteger::BigInteger256, BigInteger};
 
 #[cfg(test)]
@@ -79,11 +79,11 @@ mod to_u256 {
         let high = "0x00000000000000000000000000000000";
 
         let result = to_u256(low, high);
-        
+
         // Check if the result is within the valid range
         let min_value = BigInteger256::from_bits_be(&[false; 256][..]);
         let max_value = BigInteger256::from_bits_be(&[true; 256][..]);
-        
+
         assert!(result >= min_value);
         assert!(result <= max_value);
     }
@@ -93,7 +93,7 @@ mod to_u256 {
         let low = "invalid hex";
         let high = "0x00000000000000000000000000000000";
 
-        let result = std::panic::catch_unwind(||to_u256(low, high));
+        let result = std::panic::catch_unwind(|| to_u256(low, high));
 
         assert!(result.is_err());
     }
@@ -104,7 +104,7 @@ mod to_u256 {
         let high = "0x0000000000000001";
 
         let result = to_u256(low, high);
-        
+
         assert_eq!(result, BigInteger256::from_bits_be(&[false; 32][..]));
     }
 
@@ -114,7 +114,47 @@ mod to_u256 {
         let high = "0x0000000000000000";
 
         let result = to_u256(low, high);
-        
+
         assert_eq!(result, BigInteger256::from_bits_be(&[false; 32][..]));
+    }
+}
+
+#[cfg(test)]
+mod clean_string {
+    use super::*;
+
+    #[test]
+    fn test_clean_string_no_nulls() {
+        let input = "Hello, world!";
+        let result = clean_string(input);
+        assert_eq!(result, "Hello, world!");
+    }
+
+    #[test]
+    fn test_clean_string_with_nulls() {
+        let input = "Hello\0, world\0!";
+        let result = clean_string(input);
+        assert_eq!(result, "Hello, world!");
+    }
+
+    #[test]
+    fn test_clean_string_only_nulls() {
+        let input = "\0\0\0";
+        let result = clean_string(input);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_clean_string_empty_string() {
+        let input = "";
+        let result = clean_string(input);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_clean_string_unicode_chars() {
+        let input = "Hell\0o 🌍\0!";
+        let result = clean_string(input);
+        assert_eq!(result, "Hello 🌍!");
     }
 }
