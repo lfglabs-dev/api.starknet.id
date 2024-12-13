@@ -1,6 +1,7 @@
 use std::{str::FromStr, sync::Arc};
 
 use crate::{
+    logger::Logger,config ,
     endpoints::crosschain::ethereum::{
         lookup::ResolverFunctionCall,
         utils::{
@@ -109,6 +110,9 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
         Query::Json(data) => (data.data, data.sender.to_lowercase()),
         Query::Form(data) => (data.data, data.sender.to_lowercase()),
     };
+
+    let conf = config::load();
+    let logger = Logger::new(&conf.watchtower);
 
     match decode_data(&encoded_data) {
         Ok((name, resolver_function_call)) => {
@@ -219,7 +223,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                             }
                         }
                         ResolverFunctionCall::AddrMultichain(_bf, chain) => {
-                            println!("AddrMultichain for chain: {:?}", chain);
+                            logger.info(format!("AddrMultichain for chain: {:?}", chain));
 
                             // EVM chains have an id >=  0x80000000 (2147483648)
                             if chain >= 2147483648 {
@@ -356,7 +360,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                             }
                         }
                         _ => {
-                            println!("Unimplemented Method");
+                            logger.warning(format!("Unimplemented Method"));
                             Vec::new()
                         }
                     };

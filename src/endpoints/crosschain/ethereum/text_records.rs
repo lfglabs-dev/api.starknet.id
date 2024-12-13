@@ -11,7 +11,7 @@ use starknet::{
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
 };
 
-use crate::config::{Config, EvmRecordVerifier};
+use crate::{logger::Logger ,config,config::{Config, EvmRecordVerifier}};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum HandlerType {
@@ -125,6 +125,9 @@ pub async fn get_verifier_data(
     id: FieldElement,
     record_config: &EvmRecordVerifier,
 ) -> Option<String> {
+    let conf = config::load();
+    let logger = Logger::new(&conf.watchtower);
+
     let mut calls: Vec<FieldElement> =
         vec![FieldElement::from(record_config.verifier_contracts.len())];
     for verifier in &record_config.verifier_contracts {
@@ -157,13 +160,13 @@ pub async fn get_verifier_data(
             match record_config.execute_handler(config, social_id).await {
                 Ok(name) => Some(name),
                 Err(e) => {
-                    println!("Error while executing handler: {:?}", e);
+                    logger.warning(format!("Error while executing handler: {:?}", e));
                     None
                 }
             }
         }
         Err(err) => {
-            println!("Error while fetching balances: {:?}", err);
+            logger.severe(format!("Error while fetching balances: {:?}", err));
             None
         }
     }
@@ -190,6 +193,9 @@ pub async fn get_unbounded_user_data(
     id: FieldElement,
     field: &str,
 ) -> Option<String> {
+    let conf = config::load();
+    let logger = Logger::new(&conf.watchtower);
+
     let call_result = provider
         .call(
             FunctionCall {
@@ -218,7 +224,7 @@ pub async fn get_unbounded_user_data(
             Some(res)
         }
         Err(e) => {
-            println!("Error while fetchingverifier data: {:?}", e);
+            logger.severe(format!("Error while fetchingverifier data: {:?}", e));
             None
         }
     }

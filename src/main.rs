@@ -31,7 +31,7 @@ mod tests;
 
 #[tokio::main]
 async fn main() {
-    println!("starknetid_server: starting v{}", env!("CARGO_PKG_VERSION"));
+    // println!("starknetid_server: starting v{}", env!("CARGO_PKG_VERSION"));
     let conf = config::load();
 
     let logger = logger::Logger::new(&conf.watchtower);
@@ -57,7 +57,7 @@ async fn main() {
 
     let states = tax::sales_tax::load_sales_tax().await;
     if states.states.is_empty() {
-        println!("error: unable to load sales tax");
+        logger.severe("error: unable to load sales tax".to_string());
         return;
     }
 
@@ -78,10 +78,10 @@ async fn main() {
     // we will know by looking at the log number which db has an issue
     for db in [&shared_state.starknetid_db, &shared_state.sales_db] {
         if db.run_command(doc! {"ping": 1}, None).await.is_err() {
-            println!("error: unable to connect to a database");
+            logger.severe("error: unable to connect to a database".to_string());
             return;
         } else {
-            println!("database: connected")
+            logger.info("database: connected".to_string());
         }
     }
 
@@ -109,7 +109,10 @@ async fn main() {
         .layer(cors);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], conf.server.port));
-    println!("server: listening on http://0.0.0.0:{}", conf.server.port);
+    logger.info(format!(
+        "server: listening on http://0.0.0.0:{}",
+        conf.server.port
+    ));
     axum::Server::bind(&addr)
         .serve(app.into_make_service_with_connect_info::<SocketAddr>())
         .await
