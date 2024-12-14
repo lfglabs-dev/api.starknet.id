@@ -171,7 +171,6 @@ mod parse_image_url {
             variables: Variables {
                 ipfs_gateway: "https://ipfs.io/ipfs/".to_string(),
             },
-            ..Default::default()
         };
         let input_url = "ipfs://examplehash";
         let expected_output = "https://ipfs.io/ipfs/examplehash";
