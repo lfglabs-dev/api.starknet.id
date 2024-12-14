@@ -152,7 +152,7 @@ pub async fn handler(
                                     ]},
                                 ]},
                             ]},
-                        ], 
+                        ],
                     },
                     "count": {
                         "$sum": 1

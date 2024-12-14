@@ -139,6 +139,7 @@ struct RawConfig {
     watchtower: Watchtower,
 }
 
+
 pub_struct!(Clone, Deserialize; Config {
     server: Server,
     databases: Databases,

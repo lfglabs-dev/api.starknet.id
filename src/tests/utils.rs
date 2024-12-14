@@ -1,4 +1,4 @@
-use crate::utils::{clean_string, extract_prefix_and_root, to_u256};
+use crate::utils::{clean_string, extract_prefix_and_root, parse_image_url, to_u256};
 use ark_ff::{biginteger::BigInteger256, BigInteger};
 
 #[cfg(test)]
@@ -93,7 +93,7 @@ mod to_u256 {
         let low = "invalid hex";
         let high = "0x00000000000000000000000000000000";
 
-        let result = std::panic::catch_unwind(||to_u256(low, high));
+        let result = std::panic::catch_unwind(|| to_u256(low, high));
 
         assert!(result.is_err());
     }
@@ -156,5 +156,78 @@ mod clean_string {
         let input = "Hell\0o 🌍\0!";
         let result = clean_string(input);
         assert_eq!(result, "Hello 🌍!");
+    }
+}
+
+#[cfg(test)]
+mod parse_image_url {
+    use super::*;
+    use crate::config::{Config, Variables};
+    // use crate::config::Variables;
+
+    #[test]
+    fn test_parse_image_url_with_ipfs() {
+        let config = Config {
+            variables: Variables {
+                ipfs_gateway: "https://ipfs.io/ipfs/".to_string(),
+            },
+            ..Default::default()
+        };
+        let input_url = "ipfs://examplehash";
+        let expected_output = "https://ipfs.io/ipfs/examplehash";
+        let result = parse_image_url(&config, input_url);
+        assert_eq!(result, expected_output);
+    }
+
+    #[test]
+    fn test_parse_image_url_without_ipfs() {
+        let config = Config {
+            variables: Variables {
+                ipfs_gateway: "https://ipfs.io/ipfs/".to_string(),
+            },
+        };
+        let input_url = "https://example.com/image.png";
+        let expected_output = "https://example.com/image.png";
+        let result = parse_image_url(&config, input_url);
+        assert_eq!(result, expected_output);
+    }
+
+    #[test]
+    fn test_parse_image_url_empty_url() {
+        let config = Config {
+            variables: Variables {
+                ipfs_gateway: "https://ipfs.io/ipfs/".to_string(),
+            },
+        };
+        let input_url = "";
+        let expected_output = "";
+        let result = parse_image_url(&config, input_url);
+        assert_eq!(result, expected_output);
+    }
+
+    #[test]
+    fn test_parse_image_url_custom_ipfs_gateway() {
+        let config = Config {
+            variables: Variables {
+                ipfs_gateway: "https://custom-ipfs.gateway/".to_string(),
+            },
+        };
+        let input_url = "ipfs://examplehash";
+        let expected_output = "https://custom-ipfs.gateway/examplehash";
+        let result = parse_image_url(&config, input_url);
+        assert_eq!(result, expected_output);
+    }
+
+    #[test]
+    fn test_parse_image_url_no_prefix_no_change() {
+        let config = Config {
+            variables: Variables {
+                ipfs_gateway: "https://ipfs.io/ipfs/".to_string(),
+            },
+        };
+        let input_url = "examplehash";
+        let expected_output = "examplehash";
+        let result = parse_image_url(&config, input_url);
+        assert_eq!(result, expected_output);
     }
 }
