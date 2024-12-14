@@ -31,7 +31,6 @@ mod tests;
 
 #[tokio::main]
 async fn main() {
-
     let conf = config::load();
     let logger = logger::Logger::new(&conf.watchtower);
 
@@ -73,7 +72,7 @@ async fn main() {
             .database(&conf.databases.free_domains.name),
         states,
         dynamic_offchain_resolvers: Arc::new(Mutex::new(HashMap::new())),
-        logger: logger.clone() ,
+        logger: logger.clone(),
     });
     // we will know by looking at the log number which db has an issue
     for db in [&shared_state.starknetid_db, &shared_state.sales_db] {
