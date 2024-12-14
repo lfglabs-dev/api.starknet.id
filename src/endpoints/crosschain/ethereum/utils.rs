@@ -23,8 +23,8 @@ use starknet::{
 use std::fmt::Write;
 
 use crate::{
-    logger::Logger , 
-    config , 
+    Arc,
+    models::AppState,
     config::Config,
     endpoints::uri::VerifierData,
     utils::{fetch_image_url, parse_base64_image, to_hex},
@@ -153,9 +153,9 @@ pub async fn get_user_data(
     contract: FieldElement,
     id: FieldElement,
     field: FieldElement,
+    state: &Arc<AppState>,
 ) -> Option<FieldElement> {
-    let conf = config::load();
-    let logger = Logger::new(&conf.watchtower);
+    let logger = &state.logger;
     let call_result = provider
         .call(
             FunctionCall {
@@ -189,12 +189,13 @@ pub async fn get_user_data(
 // argent multicall to fetch both fields at once
 pub async fn get_user_data_multicall(
     provider: &JsonRpcClient<HttpTransport>,
-    config: &Config,
+    state: &Arc<AppState>,
     id: FieldElement,
     fields: Vec<FieldElement>,
+    
 ) -> Option<FieldElement> {
-    let conf = config::load();
-    let logger = Logger::new(&conf.watchtower);
+    let logger = &state.logger;
+    let config = &state.conf ;
     let mut calls: Vec<FieldElement> = vec![FieldElement::from(fields.len())];
     for field in fields {
         calls.push(config.contracts.starknetid);
@@ -236,9 +237,9 @@ pub async fn domain_to_address(
     provider: &JsonRpcClient<HttpTransport>,
     naming_contract: FieldElement,
     encoded_domain: Vec<FieldElement>,
+    state: &Arc<AppState>,
 ) -> Option<FieldElement> {
-    let conf = config::load();
-    let logger = Logger::new(&conf.watchtower);
+    let logger = &state.logger;
     let mut calldata: Vec<FieldElement> = vec![FieldElement::from(encoded_domain.len())];
     calldata.extend(encoded_domain);
     calldata.push(FieldElement::ZERO);
@@ -275,9 +276,10 @@ pub async fn get_profile_picture(
     verifier_data_collection: Collection<Document>,
     pfp_verifier: FieldElement,
     id: FieldElement,
+    state: &Arc<AppState>,
 ) -> Option<String> {
-    let conf = config::load();
-    let logger = Logger::new(&conf.watchtower);
+    let logger = &state.logger;
+
     let pipeline: Vec<Document> = vec![doc! {
         "$match": {
             "_cursor.to": null,

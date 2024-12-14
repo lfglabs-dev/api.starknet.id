@@ -1,4 +1,4 @@
-use crate::{logger::Logger,config,ecdsa_sign::non_determinist_ecdsa_sign, models::AppState, utils::get_error};
+use crate::{ecdsa_sign::non_determinist_ecdsa_sign, models::AppState, utils::get_error};
 use axum::{
     extract::{Query, State},
     response::{IntoResponse, Json},
@@ -35,8 +35,7 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<FreeDomainQuery>,
 ) -> impl IntoResponse {
-    let conf = config::load();
-    let logger = Logger::new(&conf.watchtower);
+    let logger = &state.logger;
     // assert domain is a root domain & get domain length
     let domain_parts = query.domain.split('.').collect::<Vec<&str>>();
     if domain_parts.len() != 2 {

@@ -11,7 +11,7 @@ use starknet::{
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
 };
 
-use crate::{logger::Logger ,config,config::{Config, EvmRecordVerifier}};
+use crate::{models::AppState ,Arc,config::{Config, EvmRecordVerifier}};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum HandlerType {
@@ -120,13 +120,13 @@ impl EvmRecordVerifier {
 }
 
 pub async fn get_verifier_data(
-    config: &Config,
+    state: &Arc<AppState>,
     provider: &JsonRpcClient<HttpTransport>,
     id: FieldElement,
     record_config: &EvmRecordVerifier,
 ) -> Option<String> {
-    let conf = config::load();
-    let logger = Logger::new(&conf.watchtower);
+    let logger = &state.logger;
+    let config = &state.conf;
 
     let mut calls: Vec<FieldElement> =
         vec![FieldElement::from(record_config.verifier_contracts.len())];
@@ -188,13 +188,13 @@ fn find_social_id(result: &[FieldElement]) -> FieldElement {
 }
 
 pub async fn get_unbounded_user_data(
-    config: &Config,
+    state: &Arc<AppState>,
     provider: &JsonRpcClient<HttpTransport>,
     id: FieldElement,
     field: &str,
 ) -> Option<String> {
-    let conf = config::load();
-    let logger = Logger::new(&conf.watchtower);
+    let logger = &state.logger;
+    let config = &state.conf;
 
     let call_result = provider
         .call(

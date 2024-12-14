@@ -1,9 +1,7 @@
-use crate::{logger::Logger , config ,models::States};
+use crate::{logger::Logger  ,models::States};
 use std::{collections::HashMap, fs};
 
-pub async fn load_sales_tax() -> States {
-    let conf = config::load();
-    let logger = Logger::new(&conf.watchtower);
+pub async fn load_sales_tax(logger :&Logger) -> States {
     match fs::read_to_string("./src/tax/sales_tax.json") {
         Ok(data) => match serde_json::from_str(&data) {
             Ok(states) => states,

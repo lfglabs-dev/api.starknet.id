@@ -31,9 +31,8 @@ mod tests;
 
 #[tokio::main]
 async fn main() {
-    // println!("starknetid_server: starting v{}", env!("CARGO_PKG_VERSION"));
-    let conf = config::load();
 
+    let conf = config::load();
     let logger = logger::Logger::new(&conf.watchtower);
 
     // Testing logger when server started
@@ -55,7 +54,7 @@ async fn main() {
             .await
             .unwrap();
 
-    let states = tax::sales_tax::load_sales_tax().await;
+    let states = tax::sales_tax::load_sales_tax(&logger).await;
     if states.states.is_empty() {
         logger.severe("error: unable to load sales tax".to_string());
         return;
@@ -74,6 +73,7 @@ async fn main() {
             .database(&conf.databases.free_domains.name),
         states,
         dynamic_offchain_resolvers: Arc::new(Mutex::new(HashMap::new())),
+        logger: logger.clone() ,
     });
     // we will know by looking at the log number which db has an issue
     for db in [&shared_state.starknetid_db, &shared_state.sales_db] {

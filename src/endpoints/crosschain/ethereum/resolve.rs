@@ -1,7 +1,7 @@
 use std::{str::FromStr, sync::Arc};
 
 use crate::{
-    logger::Logger,config ,
+   
     endpoints::crosschain::ethereum::{
         lookup::ResolverFunctionCall,
         utils::{
@@ -111,8 +111,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
         Query::Form(data) => (data.data, data.sender.to_lowercase()),
     };
 
-    let conf = config::load();
-    let logger = Logger::new(&conf.watchtower);
+      let logger = &state.logger;
 
     match decode_data(&encoded_data) {
         Ok((name, resolver_function_call)) => {
@@ -162,6 +161,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                         ),
                                         state.conf.contracts.pp_verifier,
                                         id,
+                                        &state,
                                     )
                                     .await
                                     {
@@ -180,7 +180,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                     match state.conf.evm_records_verifiers.get(&record) {
                                         Some(record_config) => {
                                             let record_data = get_verifier_data(
-                                                &state.conf,
+                                                &state,
                                                 &provider,
                                                 id,
                                                 record_config,
@@ -202,7 +202,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                             // if not we fetch user data for this record
                                             // existing records : header (image url), display, name, url, description, email, mail, notice, location, phone
                                             match get_unbounded_user_data(
-                                                &state.conf,
+                                                &state,
                                                 &provider,
                                                 id,
                                                 &record,
@@ -234,6 +234,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                         &provider,
                                         state.conf.contracts.naming,
                                         encoded_domain,
+                                        &state,
                                     )
                                     .await
                                     {
@@ -265,9 +266,10 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                         Some(field_name) => {
                                             match get_user_data_multicall(
                                                 &provider,
-                                                &state.conf,
+                                                &state,
                                                 id,
                                                 vec![*field_name, *EVM_ADDRESS],
+                                                
                                             )
                                             .await
                                             {
@@ -302,6 +304,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                                 state.conf.contracts.starknetid,
                                                 id,
                                                 *EVM_ADDRESS,
+                                                &state,
                                             )
                                             .await
                                             {
@@ -338,7 +341,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                         ResolverFunctionCall::Addr(_bf) => {
                             match get_user_data_multicall(
                                 &provider,
-                                &state.conf,
+                                &state,
                                 id,
                                 vec![*ETHEREUM, *EVM_ADDRESS],
                             )
