@@ -26,6 +26,8 @@ pub struct CountClubDomainsData {
     crate::endpoints::stats::expired_club_domains
 )]
 pub async fn handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let logger = &state.logger;
+
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=60"));
 
@@ -99,7 +101,7 @@ pub async fn handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
                             }
                         }
                     }
-                    Err(e) => println!("Error: {}", e),
+                    Err(e) => logger.warning(format!("Error: {}", e)),
                 }
             }
             if output.is_empty() {

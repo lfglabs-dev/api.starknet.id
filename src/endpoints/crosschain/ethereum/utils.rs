@@ -25,7 +25,9 @@ use std::fmt::Write;
 use crate::{
     config::Config,
     endpoints::uri::VerifierData,
+    models::AppState,
     utils::{fetch_image_url, parse_base64_image, to_hex},
+    Arc,
 };
 
 use super::lookup::ResolverFunctionCall;
@@ -151,7 +153,9 @@ pub async fn get_user_data(
     contract: FieldElement,
     id: FieldElement,
     field: FieldElement,
+    state: &Arc<AppState>,
 ) -> Option<FieldElement> {
+    let logger = &state.logger;
     let call_result = provider
         .call(
             FunctionCall {
@@ -176,7 +180,10 @@ pub async fn get_user_data(
             None
         }
         Err(e) => {
-            println!("Error fetching user data for field {} : {}", field, e);
+            logger.severe(format!(
+                "Error fetching user data for field {} : {}",
+                field, e
+            ));
             None
         }
     }
@@ -185,10 +192,12 @@ pub async fn get_user_data(
 // argent multicall to fetch both fields at once
 pub async fn get_user_data_multicall(
     provider: &JsonRpcClient<HttpTransport>,
-    config: &Config,
+    state: &Arc<AppState>,
     id: FieldElement,
     fields: Vec<FieldElement>,
 ) -> Option<FieldElement> {
+    let logger = &state.logger;
+    let config = &state.conf;
     let mut calls: Vec<FieldElement> = vec![FieldElement::from(fields.len())];
     for field in fields {
         calls.push(config.contracts.starknetid);
@@ -220,7 +229,7 @@ pub async fn get_user_data_multicall(
             }
         }
         Err(err) => {
-            println!("Error while fetching balances: {:?}", err);
+            logger.severe(format!("Error while fetching balances: {:?}", err));
             None
         }
     }
@@ -230,7 +239,9 @@ pub async fn domain_to_address(
     provider: &JsonRpcClient<HttpTransport>,
     naming_contract: FieldElement,
     encoded_domain: Vec<FieldElement>,
+    state: &Arc<AppState>,
 ) -> Option<FieldElement> {
+    let logger = &state.logger;
     let mut calldata: Vec<FieldElement> = vec![FieldElement::from(encoded_domain.len())];
     calldata.extend(encoded_domain);
     calldata.push(FieldElement::ZERO);
@@ -247,14 +258,17 @@ pub async fn domain_to_address(
 
     match call_result {
         Ok(result) => {
-            println!("domain_to_address result: {:?}", result);
+            logger.info(format!("domain_to_address result: {:?}", result));
             if result[0] != FieldElement::ZERO {
                 return Some(result[0]);
             }
             None
         }
         Err(e) => {
-            println!("Error fetching starknet address for domain : {}", e);
+            logger.severe(format!(
+                "Error fetching starknet address for domain : {}",
+                e
+            ));
             None
         }
     }
@@ -267,7 +281,10 @@ pub async fn get_profile_picture(
     verifier_data_collection: Collection<Document>,
     pfp_verifier: FieldElement,
     id: FieldElement,
+    state: &Arc<AppState>,
 ) -> Option<String> {
+    let logger = &state.logger;
+
     let pipeline: Vec<Document> = vec![doc! {
         "$match": {
             "_cursor.to": null,
@@ -291,7 +308,8 @@ pub async fn get_profile_picture(
                                 token_id = (token_id_arr[0].clone(), token_id_arr[1].clone());
                             }
                         } else {
-                            println!("Error: failed to get 'extended_data' as array");
+                            logger
+                                .warning(format!("Error: failed to get 'extended_data' as array"));
                         }
                     }
                 }
@@ -331,23 +349,25 @@ pub async fn get_profile_picture(
                     .await
                     {
                         Some(pfp) => {
-                            println!("Profile picture fetched successfully {}", pfp);
+                            logger.info(format!("Profile picture fetched successfully {}", pfp));
                             Some(pfp)
                         }
                         None => {
-                            println!("Error fetching profile picture from tokenURI");
+                            logger.warning(format!("Error fetching profile picture from tokenURI"));
                             None
                         }
                     }
                 }
                 Err(e) => {
-                    println!("Error fetching tokenURI for token : {}", e);
+                    logger.severe(format!("Error fetching tokenURI for token : {}", e));
                     None
                 }
             }
         }
         Err(_) => {
-            println!("Error while fetching profile picture from database");
+            logger.severe(format!(
+                "Error while fetching profile picture from database"
+            ));
             None
         }
     }

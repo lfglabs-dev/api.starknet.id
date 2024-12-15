@@ -72,7 +72,7 @@ pub async fn handler(
                         if let Some(doc) = doc_opt {
                             let domain_rs = doc.get_str("domain");
                             if let Ok(domain) = domain_rs {
-                                if get_custom_resolver(&domains, domain).await.is_none() {
+                                if get_custom_resolver(&domains, domain ,&state).await.is_none() {
                                     continue;
                                 }
                             }

@@ -109,6 +109,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
         Query::Json(data) => (data.data, data.sender.to_lowercase()),
         Query::Form(data) => (data.data, data.sender.to_lowercase()),
     };
+    let logger = &state.logger;
 
     match decode_data(&encoded_data) {
         Ok((name, resolver_function_call)) => {
@@ -158,6 +159,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                         ),
                                         state.conf.contracts.pp_verifier,
                                         id,
+                                        &state,
                                     )
                                     .await
                                     {
@@ -176,7 +178,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                     match state.conf.evm_records_verifiers.get(&record) {
                                         Some(record_config) => {
                                             let record_data = get_verifier_data(
-                                                &state.conf,
+                                                &state,
                                                 &provider,
                                                 id,
                                                 record_config,
@@ -198,10 +200,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                             // if not we fetch user data for this record
                                             // existing records : header (image url), display, name, url, description, email, mail, notice, location, phone
                                             match get_unbounded_user_data(
-                                                &state.conf,
-                                                &provider,
-                                                id,
-                                                &record,
+                                                &state, &provider, id, &record,
                                             )
                                             .await
                                             {
@@ -219,7 +218,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                             }
                         }
                         ResolverFunctionCall::AddrMultichain(_bf, chain) => {
-                            println!("AddrMultichain for chain: {:?}", chain);
+                            logger.info(format!("AddrMultichain for chain: {:?}", chain));
 
                             // EVM chains have an id >=  0x80000000 (2147483648)
                             if chain >= 2147483648 {
@@ -230,6 +229,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                         &provider,
                                         state.conf.contracts.naming,
                                         encoded_domain,
+                                        &state,
                                     )
                                     .await
                                     {
@@ -261,7 +261,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                         Some(field_name) => {
                                             match get_user_data_multicall(
                                                 &provider,
-                                                &state.conf,
+                                                &state,
                                                 id,
                                                 vec![*field_name, *EVM_ADDRESS],
                                             )
@@ -298,6 +298,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                                 state.conf.contracts.starknetid,
                                                 id,
                                                 *EVM_ADDRESS,
+                                                &state,
                                             )
                                             .await
                                             {
@@ -334,7 +335,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                         ResolverFunctionCall::Addr(_bf) => {
                             match get_user_data_multicall(
                                 &provider,
-                                &state.conf,
+                                &state,
                                 id,
                                 vec![*ETHEREUM, *EVM_ADDRESS],
                             )
@@ -356,7 +357,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                             }
                         }
                         _ => {
-                            println!("Unimplemented Method");
+                            logger.warning(format!("Unimplemented Method"));
                             Vec::new()
                         }
                     };

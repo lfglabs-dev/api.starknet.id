@@ -11,7 +11,7 @@ use starknet::{
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
 };
 
-use crate::config::{Config, EvmRecordVerifier};
+use crate::{models::AppState ,Arc,config::{Config, EvmRecordVerifier}};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum HandlerType {
@@ -120,11 +120,14 @@ impl EvmRecordVerifier {
 }
 
 pub async fn get_verifier_data(
-    config: &Config,
+    state: &Arc<AppState>,
     provider: &JsonRpcClient<HttpTransport>,
     id: FieldElement,
     record_config: &EvmRecordVerifier,
 ) -> Option<String> {
+    let logger = &state.logger;
+    let config = &state.conf;
+
     let mut calls: Vec<FieldElement> =
         vec![FieldElement::from(record_config.verifier_contracts.len())];
     for verifier in &record_config.verifier_contracts {
@@ -157,13 +160,13 @@ pub async fn get_verifier_data(
             match record_config.execute_handler(config, social_id).await {
                 Ok(name) => Some(name),
                 Err(e) => {
-                    println!("Error while executing handler: {:?}", e);
+                    logger.warning(format!("Error while executing handler: {:?}", e));
                     None
                 }
             }
         }
         Err(err) => {
-            println!("Error while fetching balances: {:?}", err);
+            logger.severe(format!("Error while fetching balances: {:?}", err));
             None
         }
     }
@@ -185,11 +188,14 @@ fn find_social_id(result: &[FieldElement]) -> FieldElement {
 }
 
 pub async fn get_unbounded_user_data(
-    config: &Config,
+    state: &Arc<AppState>,
     provider: &JsonRpcClient<HttpTransport>,
     id: FieldElement,
     field: &str,
 ) -> Option<String> {
+    let logger = &state.logger;
+    let config = &state.conf;
+
     let call_result = provider
         .call(
             FunctionCall {
@@ -218,7 +224,7 @@ pub async fn get_unbounded_user_data(
             Some(res)
         }
         Err(e) => {
-            println!("Error while fetchingverifier data: {:?}", e);
+            logger.severe(format!("Error while fetchingverifier data: {:?}", e));
             None
         }
     }
