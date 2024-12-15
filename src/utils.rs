@@ -192,7 +192,7 @@ pub fn parse_base64_image(metadata: &str) -> String {
     v["image"].as_str().unwrap_or("").to_string()
 }
 
-fn parse_image_url(config: &Config, url: &str) -> String {
+pub fn parse_image_url(config: &Config, url: &str) -> String {
     if url.starts_with("ipfs://") {
         url.replace("ipfs://", config.variables.ipfs_gateway.as_str())
     } else {
