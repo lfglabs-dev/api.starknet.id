@@ -139,7 +139,6 @@ struct RawConfig {
     watchtower: Watchtower,
 }
 
-
 pub_struct!(Clone, Deserialize; Config {
     server: Server,
     databases: Databases,
@@ -314,4 +313,101 @@ pub fn load() -> Config {
     };
 
     raw_config.into()
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            server: Server { port: 8080 }, // Default port 8080
+            databases: Databases {
+                starknetid: Database {
+                    name: "starknet_id".to_string(),
+                    connection_string: "localhost:5432".to_string(),
+                },
+                sales: Database {
+                    name: "sales".to_string(),
+                    connection_string: "localhost:5432".to_string(),
+                },
+                free_domains: Database {
+                    name: "free_domains".to_string(),
+                    connection_string: "localhost:5432".to_string(),
+                },
+            },
+            variables: Variables {
+                rpc_url: "http://localhost:8545".to_string(),
+                refresh_delay: 60.0, // Default refresh delay
+                ipfs_gateway: "https://ipfs.io/ipfs/".to_string(),
+                discord_token: "default_token".to_string(),
+                discord_api_url: "https://discord.com/api".to_string(),
+                twitter_api_key: "default_api_key".to_string(),
+                twitter_api_url: "https://api.twitter.com".to_string(),
+                github_api_url: "https://api.github.com".to_string(),
+            },
+            contracts: Contracts {
+                starknetid: FieldElement::default(),
+                naming: FieldElement::default(),
+                verifiers: vec![],
+                old_verifier: FieldElement::default(),
+                pop_verifier: FieldElement::default(),
+                pp_verifier: FieldElement::default(),
+                argent_multicall: FieldElement::default(),
+                free_domains: FieldElement::default(),
+            },
+            paymaster: Paymaster {
+                api_key: "default_api_key".to_string(),
+                api_url: "https://paymaster.example.com".to_string(),
+            },
+            starkscan: Starkscan {
+                api_url: "https://starkscan.example.com".to_string(),
+                api_key: "default_api_key".to_string(),
+            },
+            custom_resolvers: HashMap::new(),
+            reversed_resolvers: HashMap::new(),
+            solana: Solana {
+                rpc_url: "https://solana-api.example.com".to_string(),
+                private_key: FieldElement::default(),
+            },
+            altcoins: Altcoins {
+                avnu_api: "https://api.example.com".to_string(),
+                private_key: FieldElement::default(),
+                data: HashMap::new(),
+            },
+            offchain_resolvers: OffchainResolvers(HashMap::new()),
+            evm: Evm {
+                private_key: "default_private_key".to_string(),
+            },
+            evm_networks: HashMap::new(),
+            evm_records_verifiers: HashMap::new(),
+            subscription_to_altcoin: HashMap::new(),
+            free_domains: FreeDomains {
+                priv_key: FieldElement::default(),
+            },
+            watchtower: Watchtower {
+                enabled: false,
+                endpoint: "https://watchtower.example.com".to_string(),
+                app_id: "default_app_id".to_string(),
+                token: "default_token".to_string(),
+                types: WatchtowerTypes {
+                    info: "info".to_string(),
+                    warning: "warning".to_string(),
+                    severe: "severe".to_string(),
+                },
+            },
+        }
+    }
+}
+
+impl Default for Variables {
+    fn default() -> Self {
+        Variables {
+            rpc_url: "http://localhost:8545".to_string(),
+            refresh_delay: 60.0, // Default refresh delay
+            ipfs_gateway: "https://ipfs.io/ipfs/".to_string(),
+            discord_token: "default_token".to_string(),
+            discord_api_url: "https://discord.com/api".to_string(),
+            twitter_api_key: "default_api_key".to_string(),
+            twitter_api_url: "https://api.twitter.com".to_string(),
+            github_api_url: "https://api.github.com".to_string(),
+        }
+    }
 }

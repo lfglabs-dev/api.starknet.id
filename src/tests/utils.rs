@@ -162,16 +162,12 @@ mod clean_string {
 #[cfg(test)]
 mod parse_image_url {
     use super::*;
-    use crate::config::{Config, Variables};
+    use crate::config::Config;
     // use crate::config::Variables;
 
     #[test]
     fn test_parse_image_url_with_ipfs() {
-        let config = Config {
-            variables: Variables {
-                ipfs_gateway: "https://ipfs.io/ipfs/".to_string(),
-            },
-        };
+        let config = Config::default();
         let input_url = "ipfs://examplehash";
         let expected_output = "https://ipfs.io/ipfs/examplehash";
         let result = parse_image_url(&config, input_url);
@@ -180,11 +176,7 @@ mod parse_image_url {
 
     #[test]
     fn test_parse_image_url_without_ipfs() {
-        let config = Config {
-            variables: Variables {
-                ipfs_gateway: "https://ipfs.io/ipfs/".to_string(),
-            },
-        };
+        let config = Config::default();
         let input_url = "https://example.com/image.png";
         let expected_output = "https://example.com/image.png";
         let result = parse_image_url(&config, input_url);
@@ -193,11 +185,7 @@ mod parse_image_url {
 
     #[test]
     fn test_parse_image_url_empty_url() {
-        let config = Config {
-            variables: Variables {
-                ipfs_gateway: "https://ipfs.io/ipfs/".to_string(),
-            },
-        };
+        let config = Config::default();
         let input_url = "";
         let expected_output = "";
         let result = parse_image_url(&config, input_url);
@@ -206,11 +194,9 @@ mod parse_image_url {
 
     #[test]
     fn test_parse_image_url_custom_ipfs_gateway() {
-        let config = Config {
-            variables: Variables {
-                ipfs_gateway: "https://custom-ipfs.gateway/".to_string(),
-            },
-        };
+        let mut config = Config::default();
+        config.variables.ipfs_gateway = "https://custom-ipfs.gateway/".to_string();
+
         let input_url = "ipfs://examplehash";
         let expected_output = "https://custom-ipfs.gateway/examplehash";
         let result = parse_image_url(&config, input_url);
@@ -219,11 +205,7 @@ mod parse_image_url {
 
     #[test]
     fn test_parse_image_url_no_prefix_no_change() {
-        let config = Config {
-            variables: Variables {
-                ipfs_gateway: "https://ipfs.io/ipfs/".to_string(),
-            },
-        };
+        let config = Config::default();
         let input_url = "examplehash";
         let expected_output = "examplehash";
         let result = parse_image_url(&config, input_url);
