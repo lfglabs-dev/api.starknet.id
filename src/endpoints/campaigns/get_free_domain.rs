@@ -35,6 +35,7 @@ pub async fn handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<FreeDomainQuery>,
 ) -> impl IntoResponse {
+    let logger = &state.logger;
     // assert domain is a root domain & get domain length
     let domain_parts = query.domain.split('.').collect::<Vec<&str>>();
     if domain_parts.len() != 2 {
@@ -78,7 +79,7 @@ pub async fn handler(
                     }
                 }
             } else {
-                println!("Error while verifying coupon code spent status and user address");
+                logger.warning(format!("Error while verifying coupon code spent status and user address"));
                 return get_error("Error while verifying coupon code availability".to_string());
             }
 

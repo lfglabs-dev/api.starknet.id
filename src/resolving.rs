@@ -9,7 +9,8 @@ use mongodb::{
 
 use crate::{config::OffchainResolver, models::AppState, utils::clean_string};
 
-pub async fn get_custom_resolver(domains: &Collection<Document>, domain: &str) -> Option<String> {
+pub async fn get_custom_resolver(domains: &Collection<Document>, domain: &str,state: &Arc<AppState>) -> Option<String> {
+    let logger = &state.logger;
     // Split the domain into parts
     let domain_parts: Vec<&str> = domain.split('.').collect();
     if domain_parts.len() <= 2 {
@@ -47,7 +48,7 @@ pub async fn get_custom_resolver(domains: &Collection<Document>, domain: &str) -
             }
         }
         Err(err) => {
-            println!("err on custom_resolver: {}", err);
+            logger.severe(format!("err on custom_resolver: {}", err));
         }
     }
 
@@ -56,6 +57,7 @@ pub async fn get_custom_resolver(domains: &Collection<Document>, domain: &str) -
 }
 
 pub async fn update_offchain_resolvers(state: &Arc<AppState>) {
+    let logger = &state.logger;
     let offchain_resolvers = state
         .starknetid_db
         .collection::<mongodb::bson::Document>("offchain_resolvers");
@@ -111,7 +113,7 @@ pub async fn update_offchain_resolvers(state: &Arc<AppState>) {
                     let domains = match domains {
                         Ok(domains) => domains,
                         Err(err) => {
-                            println!("Error while getting array of domains: {}", err);
+                            logger.warning(format!("Error while getting array of domains: {}", err));
                             continue;
                         }
                     };
@@ -122,7 +124,7 @@ pub async fn update_offchain_resolvers(state: &Arc<AppState>) {
                         let domain = match domain {
                             Bson::String(domain) => domain,
                             _ => {
-                                println!("Error while getting domain: {:?}", domain);
+                                logger.warning(format!("Error while getting domain: {:?}", domain));
                                 continue;
                             }
                         };
@@ -167,7 +169,7 @@ pub async fn update_offchain_resolvers(state: &Arc<AppState>) {
             }
         }
         Err(err) => {
-            println!("Error while building offchain_resolver hashmap from collection offchain_resolvers: {}", err);
+            logger.severe(format!("Error while building offchain_resolver hashmap from collection offchain_resolvers: {}", err));
         }
     }
 }

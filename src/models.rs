@@ -7,6 +7,7 @@ use starknet::core::types::FieldElement;
 use crate::{
     config::{Config, OffchainResolver},
     utils::to_hex,
+    logger::Logger, 
 };
 use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
@@ -21,6 +22,7 @@ pub struct AppState {
     pub free_domains_db: Database,
     pub states: States,
     pub dynamic_offchain_resolvers: Arc<Mutex<HashMap<String, OffchainResolver>>>,
+    pub logger : Logger,
 }
 
 fn serialize_felt<S>(field_element: &FieldElement, serializer: S) -> Result<S::Ok, S::Error>
