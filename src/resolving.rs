@@ -36,8 +36,9 @@ pub async fn get_custom_resolver(domains: &Collection<Document>, domain: &str, s
         Ok(doc) => {
             if let Some(document) = doc {
                 // If the resolver field exists, is not null, and is not 0x000... then return it
-                if let Ok(resolver) = document.get_str("resolver") {
-                    if resolver != "0x0000000000000000000000000000000000000000000000000000000000000000"
+                if let Some(resolver) = document.get_str("resolver").ok() {
+                    if resolver
+                        != "0x0000000000000000000000000000000000000000000000000000000000000000"
                         && !resolver.is_empty()
                     {
                         return Some(resolver.to_string());
