@@ -1,7 +1,6 @@
 use std::{str::FromStr, sync::Arc};
 
 use crate::{
-   
     endpoints::crosschain::ethereum::{
         lookup::ResolverFunctionCall,
         utils::{
@@ -110,8 +109,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
         Query::Json(data) => (data.data, data.sender.to_lowercase()),
         Query::Form(data) => (data.data, data.sender.to_lowercase()),
     };
-
-      let logger = &state.logger;
+    let logger = &state.logger;
 
     match decode_data(&encoded_data) {
         Ok((name, resolver_function_call)) => {
@@ -202,10 +200,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                             // if not we fetch user data for this record
                                             // existing records : header (image url), display, name, url, description, email, mail, notice, location, phone
                                             match get_unbounded_user_data(
-                                                &state,
-                                                &provider,
-                                                id,
-                                                &record,
+                                                &state, &provider, id, &record,
                                             )
                                             .await
                                             {
@@ -269,7 +264,6 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                                                 &state,
                                                 id,
                                                 vec![*field_name, *EVM_ADDRESS],
-                                                
                                             )
                                             .await
                                             {

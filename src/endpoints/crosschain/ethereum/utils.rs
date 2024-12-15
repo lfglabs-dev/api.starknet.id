@@ -23,11 +23,11 @@ use starknet::{
 use std::fmt::Write;
 
 use crate::{
-    Arc,
-    models::AppState,
     config::Config,
     endpoints::uri::VerifierData,
+    models::AppState,
     utils::{fetch_image_url, parse_base64_image, to_hex},
+    Arc,
 };
 
 use super::lookup::ResolverFunctionCall;
@@ -180,7 +180,10 @@ pub async fn get_user_data(
             None
         }
         Err(e) => {
-            logger.severe(format!("Error fetching user data for field {} : {}", field, e));
+            logger.severe(format!(
+                "Error fetching user data for field {} : {}",
+                field, e
+            ));
             None
         }
     }
@@ -192,10 +195,9 @@ pub async fn get_user_data_multicall(
     state: &Arc<AppState>,
     id: FieldElement,
     fields: Vec<FieldElement>,
-    
 ) -> Option<FieldElement> {
     let logger = &state.logger;
-    let config = &state.conf ;
+    let config = &state.conf;
     let mut calls: Vec<FieldElement> = vec![FieldElement::from(fields.len())];
     for field in fields {
         calls.push(config.contracts.starknetid);
@@ -263,7 +265,10 @@ pub async fn domain_to_address(
             None
         }
         Err(e) => {
-            logger.severe(format!("Error fetching starknet address for domain : {}", e));
+            logger.severe(format!(
+                "Error fetching starknet address for domain : {}",
+                e
+            ));
             None
         }
     }
@@ -303,7 +308,8 @@ pub async fn get_profile_picture(
                                 token_id = (token_id_arr[0].clone(), token_id_arr[1].clone());
                             }
                         } else {
-                            logger.warning(format!("Error: failed to get 'extended_data' as array"));
+                            logger
+                                .warning(format!("Error: failed to get 'extended_data' as array"));
                         }
                     }
                 }
@@ -359,7 +365,9 @@ pub async fn get_profile_picture(
             }
         }
         Err(_) => {
-            logger.severe(format!("Error while fetching profile picture from database"));
+            logger.severe(format!(
+                "Error while fetching profile picture from database"
+            ));
             None
         }
     }
