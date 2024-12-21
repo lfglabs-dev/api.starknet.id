@@ -149,7 +149,7 @@ pub async fn handler(
                     let pipeline = [
                         doc! {
                             "$match": doc! {
-                                "_cursor. to": null,
+                                "_cursor.to": null,
                                 "resolver" : null,
                                 "domain": query.domain.clone(),
                             }
