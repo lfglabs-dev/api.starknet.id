@@ -26,6 +26,7 @@ pub async fn handler(
         .starknetid_db
         .collection::<mongodb::bson::Document>("domains");
     let filter = doc! {
+        "domain": { "$exists": true },
         "$or": [
             { "_cursor.to": { "$exists": false } },
             { "_cursor.to": Bson::Null },
