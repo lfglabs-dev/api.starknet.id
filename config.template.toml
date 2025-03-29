@@ -1,5 +1,6 @@
 [server]
 port = 8080
+base_url = "https://api.starknet.id"
 
 [databases]
 [databases.starknetid]
@@ -47,7 +48,7 @@ twitter_api_url = "xxxxxx"
 github_api_url = "https://api.github.com"
 
 [starkscan]
-api_url = "https://api-testnet.starkscan.co/api/v0"
+api_url = "https://api-testnet.starkscan.co/api/v0" # https://api.pyramid.market/api
 api_key = "xxxxxx"
 
 [custom_resolvers]
