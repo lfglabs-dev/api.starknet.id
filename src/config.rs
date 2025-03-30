@@ -18,7 +18,7 @@ macro_rules! pub_struct {
     }
 }
 
-pub_struct!(Clone, Deserialize; Server { port: u16 });
+pub_struct!(Clone, Deserialize; Server { port: u16, base_url: String });
 
 pub_struct!(Clone, Deserialize; Databases {
     starknetid: Database,
@@ -318,7 +318,10 @@ pub fn load() -> Config {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            server: Server { port: 8080 }, // Default port 8080
+            server: Server {
+                port: 8080,
+                base_url: "https://api.starknet.id".to_string(),
+            },
             databases: Databases {
                 starknetid: Database {
                     name: "starknet_id".to_string(),
