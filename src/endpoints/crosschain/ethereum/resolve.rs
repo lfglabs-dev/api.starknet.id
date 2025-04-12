@@ -357,7 +357,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                             }
                         }
                         _ => {
-                            logger.warning(format!("Unimplemented Method"));
+                            logger.info(format!("Unimplemented Method"));
                             Vec::new()
                         }
                     };
