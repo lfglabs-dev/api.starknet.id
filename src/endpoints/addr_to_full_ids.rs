@@ -18,7 +18,6 @@ use mongodb::{
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 use std::sync::Arc;
-use tokio::time::timeout;
 
 #[derive(Serialize, Deserialize)]
 pub struct FullId {
@@ -220,7 +219,7 @@ pub async fn handler(
                         let pp_url = match &id.pp_url_info {
                             Some((contract, id)) => {
                                 match tokio::time::timeout(
-                                    std::time::Duration::from_secs(10),
+                                    std::time::Duration::from_secs(5),
                                     fetch_img_url(
                                         &api_url_clone,
                                         &api_key_clone,
