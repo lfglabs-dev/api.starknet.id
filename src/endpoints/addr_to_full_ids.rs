@@ -218,13 +218,20 @@ pub async fn handler(
                     async move {
                         let pp_url = match &id.pp_url_info {
                             Some((contract, id)) => {
-                                fetch_img_url(
-                                    &api_url_clone,
-                                    &api_key_clone,
-                                    contract.to_owned(),
-                                    id.to_owned(),
+                                match tokio::time::timeout(
+                                    std::time::Duration::from_secs(5),
+                                    fetch_img_url(
+                                        &api_url_clone,
+                                        &api_key_clone,
+                                        contract.to_owned(),
+                                        id.to_owned(),
+                                    ),
                                 )
                                 .await
+                                {
+                                    Ok(result) => result,
+                                    Err(_) => None,
+                                }
                             }
                             None => None,
                         };
