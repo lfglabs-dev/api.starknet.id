@@ -1,4 +1,4 @@
-FROM rust:1.80
+FROM rust:1.82
 
 WORKDIR /app
 
@@ -9,9 +9,9 @@ ARG BUILD_MODE=release
 
 RUN if [ "$BUILD_MODE" = "debug" ]; then \
     cargo build; \
-else \
+    else \
     cargo build --release; \
-fi
+    fi
 
 EXPOSE 8080
 
