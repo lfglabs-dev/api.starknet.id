@@ -1,7 +1,4 @@
-use crate::{
-    models::AppState,
-    utils::{get_error, to_hex},
-};
+use crate::{models::AppState, utils::to_hex};
 use axum::{
     extract::{Query, State},
     http::StatusCode,
@@ -94,79 +91,136 @@ pub async fn handler(
     );
 
     let client = reqwest::Client::new();
-    match client
-        .get(&url)
-        .header("accept", "application/json")
-        .header("Token", "pyramid-alpha")
-        .send()
-        .await
-    {
-        Ok(response) => match response.text().await {
-            Ok(text) => match serde_json::from_str::<ApiResponse>(&text) {
-                Ok(api_res) => {
-                    // Convert API data to our StarkscanNftProps
-                    let nfts: Vec<StarkscanNftProps> = api_res
-                        .data
-                        .into_iter()
-                        .map(|item| {
-                            let meta = item.nft.metadata;
-                            let is_animation =
-                                meta.image_type.to_lowercase().starts_with("animation/");
 
-                            StarkscanNftProps {
-                                animation_url: if is_animation {
-                                    Some(meta.image.clone())
-                                } else {
-                                    None
-                                },
-                                attributes: None,
-                                contract_address: item.nft.collection_address,
-                                description: None,
-                                external_url: None,
-                                image_url: Some(meta.image.clone()),
-                                image_medium_url: Some(meta.image.clone()),
-                                image_small_url: Some(meta.image.clone()),
-                                minted_at_transaction_hash: None,
-                                minted_by_address: None,
-                                token_id: item.nft.token_id.clone(),
-                                name: meta.name,
-                                nft_id: Some(item.nft.token_id.clone()),
-                                token_uri: None,
-                                minted_at_timestamp: 0,
-                            }
-                        })
-                        .collect();
+    // Try to fetch from Pyramid API with timeout
+    let api_result = tokio::time::timeout(
+        // 10 second timeout
+        std::time::Duration::from_secs(10),
+        client
+            .get(&url)
+            .header("accept", "application/json")
+            .header("Token", "pyramid-alpha")
+            .send(),
+    )
+    .await;
 
-                    // Determine next_url
-                    let next_url = if nfts.len() < PAGE_SIZE {
-                        None
-                    } else {
-                        Some(format!(
-                            "{}/starkscan/fetch_nfts?addr={}&cursor={}",
-                            state.conf.server.base_url,
-                            addr_hex,
-                            page_index + 1
-                        ))
-                    };
+    match api_result {
+        Ok(Ok(response)) => {
+            // API call succeeded, try to parse response
+            match response.text().await {
+                Ok(text) => match serde_json::from_str::<ApiResponse>(&text) {
+                    Ok(api_res) => {
+                        // Convert API data to our StarkscanNftProps
+                        let nfts: Vec<StarkscanNftProps> = api_res
+                            .data
+                            .into_iter()
+                            .map(|item| {
+                                let meta = item.nft.metadata;
+                                let is_animation =
+                                    meta.image_type.to_lowercase().starts_with("animation/");
 
-                    // Return our custom struct
-                    let result = Result {
-                        data: nfts,
-                        next_url,
-                    };
+                                StarkscanNftProps {
+                                    animation_url: if is_animation {
+                                        Some(meta.image.clone())
+                                    } else {
+                                        None
+                                    },
+                                    attributes: None,
+                                    contract_address: item.nft.collection_address,
+                                    description: None,
+                                    external_url: None,
+                                    image_url: Some(meta.image.clone()),
+                                    image_medium_url: Some(meta.image.clone()),
+                                    image_small_url: Some(meta.image.clone()),
+                                    minted_at_transaction_hash: None,
+                                    minted_by_address: None,
+                                    token_id: item.nft.token_id.clone(),
+                                    name: meta.name,
+                                    nft_id: Some(item.nft.token_id.clone()),
+                                    token_uri: None,
+                                    minted_at_timestamp: 0,
+                                }
+                            })
+                            .collect();
 
-                    (StatusCode::OK, Json(result)).into_response()
+                        // Determine next_url
+                        let next_url = if nfts.len() < PAGE_SIZE {
+                            None
+                        } else {
+                            Some(format!(
+                                "{}/starkscan/fetch_nfts?addr={}&cursor={}",
+                                state.conf.server.base_url,
+                                addr_hex,
+                                page_index + 1
+                            ))
+                        };
+
+                        // Return our custom struct
+                        let result = Result {
+                            data: nfts,
+                            next_url,
+                        };
+
+                        (StatusCode::OK, Json(result)).into_response()
+                    }
+                    Err(e) => {
+                        // Failed to parse API response, return fallback
+                        state.logger.warning(format!("Failed to deserialize Pyramid API response: {} for response: {}. Returning fallback response.", e, text));
+                        return_fallback_response(addr_hex, page_index, &state)
+                    }
+                },
+                Err(e) => {
+                    // Failed to get response text, return fallback
+                    state.logger.warning(format!("Failed to get JSON response from Pyramid API: {}. Returning fallback response.", e));
+                    return_fallback_response(addr_hex, page_index, &state)
                 }
-                Err(e) => get_error(format!(
-                    "Failed to deserialize result from Starkscan API: {} for response: {}",
-                    e, text
-                )),
-            },
-            Err(e) => get_error(format!(
-                "Failed to get JSON response while fetching user NFT data: {}",
+            }
+        }
+        Ok(Err(e)) => {
+            // HTTP request failed, return fallback
+            state.logger.warning(format!(
+                "Pyramid API request failed: {}. Returning fallback response.",
                 e
-            )),
-        },
-        Err(e) => get_error(format!("Failed to fetch user NFTs from API: {}", e)),
+            ));
+            return_fallback_response(addr_hex, page_index, &state)
+        }
+        Err(_) => {
+            // Request timed out, return fallback
+            state
+                .logger
+                .warning("Pyramid API request timed out. Returning fallback response.".to_string());
+            return_fallback_response(addr_hex, page_index, &state)
+        }
     }
+}
+
+/// Fallback function to return a response when Pyramid API is unavailable
+/// Returns an empty NFT collection with appropriate metadata
+fn return_fallback_response(
+    addr_hex: String,
+    page_index: u32,
+    state: &Arc<AppState>,
+) -> axum::response::Response {
+    state.logger.info(format!(
+        "Returning fallback response for address: {} (page: {})",
+        addr_hex, page_index
+    ));
+
+    // Return empty data but maintain the expected structure
+    let fallback_result = Result {
+        data: Vec::new(), // Empty NFT list
+        next_url: None,   // No pagination since we have no data
+    };
+
+    // Add a custom header to indicate this is a fallback response
+    let mut response = (StatusCode::OK, Json(fallback_result)).into_response();
+    response
+        .headers_mut()
+        .insert("X-Fallback-Response", "true".parse().unwrap());
+    response.headers_mut().insert(
+        "X-Fallback-Reason",
+        "pyramid-api-unavailable".parse().unwrap(),
+    );
+
+    response
 }
