@@ -1,6 +1,6 @@
 use crate::{
     models::AppState,
-    utils::{fetch_img_url, get_error, to_hex, to_u256},
+    utils::{get_error, to_hex},
 };
 use axum::{
     extract::{Query, State},
@@ -26,15 +26,12 @@ pub struct FullId {
     domain: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     domain_expiry: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pp_url: Option<String>,
 }
 
 pub struct TempsFullId {
     id: String,
     domain: Option<String>,
     domain_expiry: Option<i64>,
-    pp_url_info: Option<(String, String)>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -165,83 +162,20 @@ pub async fn handler(
                     .to_string();
                     let domain = doc.get_str("domain").ok().map(String::from);
                     let domain_expiry = doc.get_i64("domain_expiry").ok();
-                    let pp_verifier_data = doc.get_array("pp_verifier_data").ok();
-                    let mut pp_url_info = None;
-                    if let Some(data) = pp_verifier_data {
-                        let mut contract_str_opt: Option<String> = None;
-                        let mut data_id_opt: Option<&Vec<Bson>> = None;
-
-                        for item in data.iter() {
-                            if let Bson::Document(doc_item) = item {
-                                if let Ok(field_str) = doc_item.get_str("field") {
-                                    if field_str == "0x00000000000000000000000000000000006e66745f70705f636f6e7472616374" {
-                                contract_str_opt = doc_item.get_str("data").ok().map(String::from);
-                            } else if field_str == "0x00000000000000000000000000000000000000000000006e66745f70705f6964" {
-                                data_id_opt = doc_item.get_array("extended_data").ok();
-                            }
-                                }
-                            }
-                        }
-
-                        if contract_str_opt.is_some() && data_id_opt.is_some() {
-                            let contract_str = contract_str_opt.unwrap();
-                            let data_id: Vec<String> = data_id_opt
-                                .unwrap()
-                                .into_iter()
-                                .map(|b| match b {
-                                    Bson::String(s) => s.to_owned(),
-                                    _ => b.to_string(),
-                                })
-                                .collect();
-
-                            let id = to_u256(data_id.get(0).unwrap(), data_id.get(1).unwrap())
-                                .to_string();
-
-                            pp_url_info = Some((contract_str, id));
-                        }
-                    }
                     temp_full_ids.push(TempsFullId {
                         id,
                         domain,
                         domain_expiry,
-                        pp_url_info,
                     });
                 }
             }
-            let api_url = state.conf.starkscan.api_url.clone();
-            let api_key = state.conf.starkscan.api_key.clone();
             let full_ids_futures: Vec<_> = temp_full_ids
                 .iter()
-                .map(|id| {
-                    let api_url_clone = api_url.clone();
-                    let api_key_clone = api_key.clone();
-                    async move {
-                        let pp_url = match &id.pp_url_info {
-                            Some((contract, id)) => {
-                                match tokio::time::timeout(
-                                    std::time::Duration::from_secs(2),
-                                    fetch_img_url(
-                                        &api_url_clone,
-                                        &api_key_clone,
-                                        contract.to_owned(),
-                                        id.to_owned(),
-                                    ),
-                                )
-                                .await
-                                {
-                                    Ok(result) => result,
-                                    Err(_) => None,
-                                }
-                            }
-                            None => None,
-                        };
-
-                        FullId {
-                            id: id.id.clone(),
-                            domain: id.domain.clone(),
-                            domain_expiry: id.domain_expiry,
-                            pp_url: pp_url,
-                        }
+                .map(|id| async move {
+                    FullId {
+                        id: id.id.clone(),
+                        domain: id.domain.clone(),
+                        domain_expiry: id.domain_expiry,
                     }
                 })
                 .collect();
