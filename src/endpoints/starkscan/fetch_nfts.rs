@@ -94,8 +94,8 @@ pub async fn handler(
 
     // Try to fetch from Pyramid API with timeout
     let api_result = tokio::time::timeout(
-        // 10 second timeout
-        std::time::Duration::from_secs(10),
+        // 3 second timeout
+        std::time::Duration::from_secs(3),
         client
             .get(&url)
             .header("accept", "application/json")
