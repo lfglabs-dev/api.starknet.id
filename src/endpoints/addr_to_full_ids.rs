@@ -219,7 +219,7 @@ pub async fn handler(
                         let pp_url = match &id.pp_url_info {
                             Some((contract, id)) => {
                                 match tokio::time::timeout(
-                                    std::time::Duration::from_secs(5),
+                                    std::time::Duration::from_secs(2),
                                     fetch_img_url(
                                         &api_url_clone,
                                         &api_key_clone,
