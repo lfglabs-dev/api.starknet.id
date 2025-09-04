@@ -188,7 +188,7 @@ pub async fn handler(
             // Request timed out, return fallback
             state
                 .logger
-                .warning("Pyramid API request timed out. Returning fallback response.".to_string());
+                .info("Pyramid API request timed out. Returning fallback response.".to_string());
             return_fallback_response(addr_hex, page_index, &state)
         }
     }
