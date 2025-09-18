@@ -31,7 +31,7 @@ use reqwest::Url;
 use serde::Deserialize;
 use serde_json::json;
 use starknet::{
-    core::types::{BlockId, BlockTag, FieldElement, FunctionCall},
+    core::types::{BlockId, BlockTag, Felt, FunctionCall},
     macros::{selector, short_string},
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
 };
@@ -95,8 +95,8 @@ where
 }
 
 lazy_static! {
-    static ref EVM_ADDRESS: FieldElement = short_string!("evm-address");
-    static ref ETHEREUM: FieldElement = short_string!("ethereum");
+    static ref EVM_ADDRESS: Felt = short_string!("evm-address");
+    static ref ETHEREUM: Felt = short_string!("ethereum");
 }
 
 #[route(
@@ -119,7 +119,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
             } else {
                 return get_error(format!("Domain with wrong size {}", name));
             };
-            let encoded_domain: Vec<FieldElement> = root_domain
+            let encoded_domain: Vec<Felt> = root_domain
                 .iter()
                 .map(|&part| encode(part).unwrap())
                 .collect();
@@ -128,7 +128,7 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
             let provider = JsonRpcClient::new(HttpTransport::new(
                 Url::parse(&state.conf.variables.rpc_url).unwrap(),
             ));
-            let mut calldata: Vec<FieldElement> = vec![FieldElement::from(encoded_domain.len())];
+            let mut calldata: Vec<Felt> = vec![Felt::from(encoded_domain.len())];
             calldata.extend(encoded_domain.clone());
             let call_result = provider
                 .call(
@@ -142,10 +142,10 @@ pub async fn handler(State(state): State<Arc<AppState>>, query: Query) -> impl I
                 .await;
             match call_result {
                 Ok(result) => {
-                    if result[0] == FieldElement::ZERO {
+                    if result[0] == Felt::ZERO {
                         return get_error(format!("No identity found for : {}", name));
                     }
-                    let id: FieldElement = result[0];
+                    let id: Felt = result[0];
 
                     let payload: Vec<Token> = match resolver_function_call {
                         ResolverFunctionCall::Text(_alt_hash, record) => {

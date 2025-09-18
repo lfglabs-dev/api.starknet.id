@@ -11,12 +11,12 @@ use mongodb::{
     options::UpdateOptions,
 };
 use serde::Deserialize;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::sync::Arc;
 
 #[derive(Deserialize)]
 pub struct AddClickQuery {
-    sponsor_addr: FieldElement,
+    sponsor_addr: Felt,
 }
 
 #[route(post, "/referral/add_click", crate::endpoints::referral::add_click)]

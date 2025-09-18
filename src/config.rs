@@ -1,6 +1,6 @@
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet::core::utils::cairo_short_string_to_felt;
 use std::collections::HashMap;
 use std::env;
@@ -32,14 +32,14 @@ pub_struct!(Clone, Deserialize; Database {
 });
 
 pub_struct!(Clone, Deserialize; Contracts {
-    starknetid: FieldElement,
-    naming: FieldElement,
-    verifiers: Vec<FieldElement>,
-    old_verifier: FieldElement,
-    pop_verifier: FieldElement,
-    pp_verifier: FieldElement,
-    argent_multicall: FieldElement,
-    free_domains: FieldElement,
+    starknetid: Felt,
+    naming: Felt,
+    verifiers: Vec<Felt>,
+    old_verifier: Felt,
+    pop_verifier: Felt,
+    pp_verifier: Felt,
+    argent_multicall: Felt,
+    free_domains: Felt,
 });
 
 pub_struct!(Clone, Deserialize; Paymaster {
@@ -54,30 +54,30 @@ pub_struct!(Clone, Deserialize; Starkscan {
 
 pub_struct!(Clone, Deserialize; Solana {
     rpc_url: String,
-    private_key: FieldElement,
+    private_key: Felt,
 });
 
 pub_struct!(Clone, Debug, Deserialize; AltcoinData {
-    address: FieldElement,
+    address: Felt,
     min_price: u64,
     max_price: u64,
     decimals: u32,
     max_quote_validity: i64,
-    auto_renew_contract: Option<FieldElement>,
+    auto_renew_contract: Option<Felt>,
 });
 
 #[derive(Debug, Deserialize)]
 struct TempAltcoins {
     avnu_api: String,
-    private_key: FieldElement,
+    private_key: Felt,
     #[serde(flatten)]
     data: HashMap<String, AltcoinData>,
 }
 
 pub_struct!(Clone, Debug; Altcoins {
     avnu_api: String,
-    private_key: FieldElement,
-    data: HashMap<FieldElement, AltcoinData>,
+    private_key: Felt,
+    data: HashMap<Felt, AltcoinData>,
 });
 
 pub_struct!(Clone, Debug, Deserialize; Variables {
@@ -111,13 +111,13 @@ pub_struct!(Clone, Debug, Deserialize; Evm {
 pub struct OffchainResolvers(HashMap<String, OffchainResolver>);
 
 pub_struct!(Clone, Debug, Deserialize; EvmRecordVerifier {
-    verifier_contracts: Vec<FieldElement>,
+    verifier_contracts: Vec<Felt>,
     field: String,
     handler: HandlerType,
 });
 
 pub_struct!(Clone, Debug, Deserialize; FreeDomains {
-    priv_key: FieldElement,
+    priv_key: Felt,
 });
 
 #[derive(Deserialize)]
@@ -152,9 +152,9 @@ pub_struct!(Clone, Deserialize; Config {
     altcoins: Altcoins,
     offchain_resolvers: OffchainResolvers,
     evm: Evm,
-    evm_networks: HashMap<u64, FieldElement>,
+    evm_networks: HashMap<u64, Felt>,
     evm_records_verifiers: HashMap<String, EvmRecordVerifier>,
-    subscription_to_altcoin: HashMap<FieldElement, String>,
+    subscription_to_altcoin: HashMap<Felt, String>,
     free_domains: FreeDomains,
     watchtower: Watchtower,
 });
@@ -175,7 +175,7 @@ pub_struct!(Clone, Deserialize; WatchtowerTypes {
 
 impl Altcoins {
     fn new(temp: TempAltcoins) -> Self {
-        let data: HashMap<FieldElement, AltcoinData> = temp
+        let data: HashMap<Felt, AltcoinData> = temp
             .data
             .into_values()
             .map(|val| {
@@ -347,14 +347,14 @@ impl Default for Config {
                 github_api_url: "https://api.github.com".to_string(),
             },
             contracts: Contracts {
-                starknetid: FieldElement::default(),
-                naming: FieldElement::default(),
+                starknetid: Felt::default(),
+                naming: Felt::default(),
                 verifiers: vec![],
-                old_verifier: FieldElement::default(),
-                pop_verifier: FieldElement::default(),
-                pp_verifier: FieldElement::default(),
-                argent_multicall: FieldElement::default(),
-                free_domains: FieldElement::default(),
+                old_verifier: Felt::default(),
+                pop_verifier: Felt::default(),
+                pp_verifier: Felt::default(),
+                argent_multicall: Felt::default(),
+                free_domains: Felt::default(),
             },
             paymaster: Paymaster {
                 api_key: "default_api_key".to_string(),
@@ -368,11 +368,11 @@ impl Default for Config {
             reversed_resolvers: HashMap::new(),
             solana: Solana {
                 rpc_url: "https://solana-api.example.com".to_string(),
-                private_key: FieldElement::default(),
+                private_key: Felt::default(),
             },
             altcoins: Altcoins {
                 avnu_api: "https://api.example.com".to_string(),
-                private_key: FieldElement::default(),
+                private_key: Felt::default(),
                 data: HashMap::new(),
             },
             offchain_resolvers: OffchainResolvers(HashMap::new()),
@@ -383,7 +383,7 @@ impl Default for Config {
             evm_records_verifiers: HashMap::new(),
             subscription_to_altcoin: HashMap::new(),
             free_domains: FreeDomains {
-                priv_key: FieldElement::default(),
+                priv_key: Felt::default(),
             },
             watchtower: Watchtower {
                 enabled: false,

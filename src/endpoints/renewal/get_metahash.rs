@@ -11,7 +11,7 @@ use axum_auto_routes::route;
 use futures::TryStreamExt;
 use mongodb::bson::{doc, Bson};
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::sync::Arc;
 
 #[derive(Serialize)]
@@ -22,7 +22,7 @@ pub struct GetMetaHashData {
 
 #[derive(Deserialize)]
 pub struct GetMetaHashQuery {
-    addr: FieldElement,
+    addr: Felt,
 }
 
 #[route(get, "/renewal/get_metahash", crate::endpoints::renewal::get_metahash)]

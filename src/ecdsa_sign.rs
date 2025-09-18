@@ -2,13 +2,13 @@ use crypto_bigint::{Encoding, NonZero, U256};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use starknet::core::{
     crypto::{EcdsaSignError, ExtendedSignature},
-    types::FieldElement,
+    types::Felt,
 };
 use starknet_crypto::{rfc6979_generate_k, sign, SignError};
 
 pub fn non_determinist_ecdsa_sign(
-    private_key: &FieldElement,
-    message_hash: &FieldElement,
+    private_key: &Felt,
+    message_hash: &Felt,
 ) -> Result<ExtendedSignature, EcdsaSignError> {
     // Seed-retry logic ported from `cairo-lang`
     let mut seed = Some(from_random());
@@ -25,15 +25,15 @@ pub fn non_determinist_ecdsa_sign(
             Err(SignError::InvalidK) => {
                 // Bump seed and retry
                 seed = match seed {
-                    Some(prev_seed) => Some(prev_seed + FieldElement::ONE),
-                    None => Some(FieldElement::ONE),
+                    Some(prev_seed) => Some(prev_seed + Felt::ONE),
+                    None => Some(Felt::ONE),
                 };
             }
         };
     }
 }
 
-fn from_random() -> FieldElement {
+fn from_random() -> Felt {
     const PRIME: NonZero<U256> = NonZero::from_uint(U256::from_be_hex(
         "0800000000000011000000000000000000000000000000000000000000000001",
     ));
@@ -46,7 +46,7 @@ fn from_random() -> FieldElement {
     let secret_scalar = random_u256.rem(&PRIME);
 
     // It's safe to unwrap here as we're 100% sure it's not out of range
-    let secret_scalar = FieldElement::from_byte_slice_be(&secret_scalar.to_be_bytes()).unwrap();
+    let secret_scalar = Felt::from_bytes_be(&secret_scalar.to_be_bytes());
 
     secret_scalar
 }

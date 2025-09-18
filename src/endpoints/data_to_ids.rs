@@ -10,7 +10,7 @@ use axum::{
 use axum_auto_routes::route;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::sync::Arc;
 
 #[derive(Serialize)]
@@ -20,9 +20,9 @@ pub struct StarknetIdData {
 
 #[derive(Deserialize)]
 pub struct StarknetIdQuery {
-    verifier: FieldElement,
-    field: FieldElement,
-    data: FieldElement,
+    verifier: Felt,
+    field: Felt,
+    data: Felt,
 }
 
 #[route(get, "/data_to_ids", crate::endpoints::data_to_ids)]

@@ -11,7 +11,7 @@ use axum::{
 use axum_auto_routes::route;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::sync::Arc;
 
 #[derive(Serialize)]
@@ -21,7 +21,7 @@ pub struct AddrToDomainData {
 
 #[derive(Deserialize)]
 pub struct AddrHasRevQuery {
-    addr: FieldElement,
+    addr: Felt,
 }
 
 #[route(get, "/addr_has_rev", crate::endpoints::addr_has_rev)]

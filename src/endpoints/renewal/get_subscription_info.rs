@@ -12,12 +12,12 @@ use futures::StreamExt;
 use mongodb::{bson::doc, options::AggregateOptions};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Deserialize)]
 pub struct StarknetIdQuery {
-    addr: FieldElement,
+    addr: Felt,
 }
 
 lazy_static::lazy_static! {
@@ -231,7 +231,7 @@ pub async fn handler(
                                 state
                                     .conf
                                     .subscription_to_altcoin
-                                    .get(&FieldElement::from_hex_be(contract).unwrap())
+                                    .get(&Felt::from_hex(contract).unwrap())
                                     .cloned()
                             });
 

@@ -12,25 +12,25 @@ use serde::Deserialize;
 use serde_json::json;
 use starknet::core::{
     crypto::{ecdsa_sign, pedersen_hash},
-    types::FieldElement,
+    types::Felt,
 };
 
 use crate::{models::AppState, utils::get_error};
 
 #[derive(Deserialize)]
 pub struct AddrQuery {
-    erc20_addr: FieldElement,
+    erc20_addr: Felt,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct AvnuApiResult {
-    address: FieldElement,
+    address: Felt,
     #[serde(rename = "currentPrice")]
     current_price: f64,
 }
 
 lazy_static::lazy_static! {
-    static ref QUOTE_STR: FieldElement = FieldElement::from_dec_str("724720344857006587549020016926517802128122613457935427138661").unwrap();
+    static ref QUOTE_STR: Felt = Felt::from_dec_str("724720344857006587549020016926517802128122613457935427138661").unwrap();
 }
 
 #[route(get, "/get_altcoin_quote", crate::endpoints::get_altcoin_quote)]
@@ -79,12 +79,10 @@ pub async fn handler(
                                 &pedersen_hash(
                                     &pedersen_hash(
                                         &query.erc20_addr,
-                                        &FieldElement::from_dec_str(
-                                            current_price_wei.to_string().as_str(),
-                                        )
-                                        .unwrap(),
+                                        &Felt::from_dec_str(current_price_wei.to_string().as_str())
+                                            .unwrap(),
                                     ),
-                                    &FieldElement::from_dec_str(
+                                    &Felt::from_dec_str(
                                         max_validity_timestamp.to_string().as_str(),
                                     )
                                     .unwrap(),

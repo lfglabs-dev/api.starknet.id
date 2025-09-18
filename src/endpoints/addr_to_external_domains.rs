@@ -11,7 +11,7 @@ use axum_auto_routes::route;
 use futures::StreamExt;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::sync::Arc; // for stream handling
 
 #[derive(Serialize)]
@@ -21,7 +21,7 @@ pub struct DomainData {
 
 #[derive(Deserialize)]
 pub struct DomainQuery {
-    addr: FieldElement,
+    addr: Felt,
 }
 
 #[route(
@@ -58,8 +58,7 @@ pub async fn handler(
                         let domain_slice =
                             doc.get_str("domain_slice").unwrap_or_default().to_owned();
                         let resolver =
-                            FieldElement::from_hex_be(doc.get_str("resolver").unwrap_or_default())
-                                .unwrap();
+                            Felt::from_hex(doc.get_str("resolver").unwrap_or_default()).unwrap();
                         match state.conf.custom_resolvers.get(&to_hex(&resolver)) {
                             // a resolver can be associated to multiple domains, eg: argent.stark and ag.stark
                             Some(parents) => {

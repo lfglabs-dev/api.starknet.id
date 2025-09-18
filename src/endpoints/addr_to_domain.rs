@@ -17,7 +17,7 @@ use mongodb::{
     Cursor,
 };
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::sync::Arc;
 
 #[derive(Serialize)]
@@ -28,7 +28,7 @@ pub struct AddrToDomainData {
 
 #[derive(Deserialize)]
 pub struct AddrToDomainQuery {
-    addr: FieldElement,
+    addr: Felt,
 }
 
 async fn read_cursor(mut cursor: Cursor<Document>) -> Result<AddrToDomainData> {

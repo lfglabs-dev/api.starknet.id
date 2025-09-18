@@ -12,7 +12,7 @@ use chrono::DateTime;
 use futures::StreamExt;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Serialize)]
@@ -32,7 +32,7 @@ pub struct Attribute {
 
 #[derive(Deserialize)]
 pub struct TokenIdQuery {
-    id: FieldElement,
+    id: Felt,
 }
 
 #[derive(Serialize, Debug, Deserialize)]

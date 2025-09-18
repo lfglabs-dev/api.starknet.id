@@ -1,14 +1,14 @@
 use crate::{ecdsa_sign::non_determinist_ecdsa_sign, models::AppState, utils::get_error};
+use axum::http::StatusCode;
 use axum::{
     extract::{Query, State},
     response::{IntoResponse, Json},
 };
 use axum_auto_routes::route;
 use mongodb::bson::doc;
-use reqwest::StatusCode;
 use serde::Deserialize;
 use serde_json::json;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use starknet_crypto::pedersen_hash;
 use std::sync::Arc;
 
@@ -16,14 +16,14 @@ use crate::utils::to_hex;
 
 #[derive(Deserialize)]
 pub struct FreeDomainQuery {
-    addr: FieldElement,
+    addr: Felt,
     code: String,
     domain: String,
 }
 
 lazy_static::lazy_static! {
     // free domain registration
-    static ref FREE_DOMAIN_STR: FieldElement = FieldElement::from_dec_str("2511989689804727759073888271181282305524144280507626647406").unwrap();
+    static ref FREE_DOMAIN_STR: Felt = Felt::from_dec_str("2511989689804727759073888271181282305524144280507626647406").unwrap();
 }
 
 #[route(
@@ -79,7 +79,9 @@ pub async fn handler(
                     }
                 }
             } else {
-                logger.warning(format!("Error while verifying coupon code spent status and user address"));
+                logger.warning(format!(
+                    "Error while verifying coupon code spent status and user address"
+                ));
                 return get_error("Error while verifying coupon code availability".to_string());
             }
 

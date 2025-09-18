@@ -28,15 +28,15 @@ lazy_static = "1.5.0"
 mongodb = "2.8.2"
 rand = "0.8.5"
 regex = "1.10.6"
-reqwest = {version = "0.11.27", features = ["json"]}
+reqwest = {version = "0.12", features = ["json"]}
 serde = {version = "1.0.209", features = ["derive"]}
 serde_derive = "1.0.183"
 serde_json = "1.0.127"
 serde_urlencoded = "0.7.1"
 solana-sdk = "1.18.23"
-starknet = {git = "https://github.com/xJonathanLEI/starknet-rs", rev = "c974e5cb42e8d8344cee910b76005ec46b4dd3ed"}
-starknet-crypto = {git = "https://github.com/xJonathanLEI/starknet-rs", rev = "c974e5cb42e8d8344cee910b76005ec46b4dd3ed", package = "starknet-crypto"}
-starknet-id = {git = "https://github.com/starknet-id/starknetid.rs", rev = "2b30c2453b96789a628c86d2edebb1023fa2e77d"}
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "85906137d634c86b07de20fa33071e5cf186ce21" }
+starknet-crypto = {git = "https://github.com/xJonathanLEI/starknet-rs", rev = "85906137d634c86b07de20fa33071e5cf186ce21", package = "starknet-crypto"}
+starknet-id = { git = "https://github.com/starknet-id/starknetid.rs", rev = "04958762b3085311d4f0d865941295a6411a694b" }
 tokio = {version = "1.40.0", features = ["macros", "rt-multi-thread"]}
 toml = "0.7.8"
 tower-http = {version = "0.4.4", features = ["cors"]}

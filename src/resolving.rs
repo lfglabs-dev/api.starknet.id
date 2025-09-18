@@ -9,7 +9,11 @@ use mongodb::{
 
 use crate::{config::OffchainResolver, models::AppState, utils::clean_string};
 
-pub async fn get_custom_resolver(domains: &Collection<Document>, domain: &str,state: &Arc<AppState>) -> Option<String> {
+pub async fn get_custom_resolver(
+    domains: &Collection<Document>,
+    domain: &str,
+    state: &Arc<AppState>,
+) -> Option<String> {
     let logger = &state.logger;
     // Split the domain into parts
     let domain_parts: Vec<&str> = domain.split('.').collect();
@@ -113,7 +117,8 @@ pub async fn update_offchain_resolvers(state: &Arc<AppState>) {
                     let domains = match domains {
                         Ok(domains) => domains,
                         Err(err) => {
-                            logger.warning(format!("Error while getting array of domains: {}", err));
+                            logger
+                                .warning(format!("Error while getting array of domains: {}", err));
                             continue;
                         }
                     };

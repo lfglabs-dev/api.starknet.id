@@ -11,7 +11,7 @@ use axum_auto_routes::route;
 use futures::TryStreamExt;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::sync::Arc;
 
 #[derive(Serialize)]
@@ -21,7 +21,7 @@ pub struct StarknetIdData {
 
 #[derive(Deserialize)]
 pub struct StarknetIdQuery {
-    addr: FieldElement,
+    addr: Felt,
     domain: String,
 }
 
