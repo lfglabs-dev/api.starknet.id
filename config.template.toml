@@ -73,7 +73,7 @@ private_key = "123"
 [altcoins.STRK]
 address = "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d"
 min_price = 500
-max_price = 5000
+max_price = 50000
 decimals = 18
 max_quote_validity = 300                                                                   # it moves faster so we reduce the quote validity
 auto_renew_contract = "0x078F63fcD145Ddc6ca932E562b466AFbfD7c9E882C9aa70f3e5b2ce05cD892eA"
