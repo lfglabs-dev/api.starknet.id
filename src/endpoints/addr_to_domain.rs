@@ -10,7 +10,10 @@ use axum::{
     Json,
 };
 use axum_auto_routes::route;
-use futures::StreamExt;
+use futures::{
+    future::{select_ok, BoxFuture},
+    StreamExt,
+};
 use mongodb::{
     bson::{doc, Document},
     options::AggregateOptions,
@@ -68,20 +71,16 @@ pub async fn handler(
     let normal_pipeline = create_normal_pipeline(&hex_addr);
     let main_id_pipeline = create_main_id_pipeline(&hex_addr);
 
-    let results = [
-        aggregate_data(domains_collection.clone(), legacy_pipeline),
-        aggregate_data(domains_collection.clone(), normal_pipeline),
-        aggregate_data(id_owners_collection, main_id_pipeline),
+    let futures: Vec<BoxFuture<'static, Result<AddrToDomainData>>> = vec![
+        Box::pin(aggregate_data(domains_collection.clone(), legacy_pipeline)),
+        Box::pin(aggregate_data(domains_collection.clone(), normal_pipeline)),
+        Box::pin(aggregate_data(id_owners_collection, main_id_pipeline)),
     ];
 
-    for result in results {
-        match result.await {
-            Ok(data) => return (StatusCode::OK, Json(data)).into_response(),
-            Err(_) => continue,
-        }
+    match select_ok(futures).await {
+        Ok((data, _remaining)) => (StatusCode::OK, Json(data)).into_response(),
+        Err(_) => get_error("No data found for the given address".to_string()),
     }
-
-    get_error("No data found for the given address".to_string())
 }
 
 fn create_legacy_pipeline(address: &String) -> Vec<Document> {
