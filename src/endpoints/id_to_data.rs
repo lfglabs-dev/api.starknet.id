@@ -11,12 +11,12 @@ use axum_auto_routes::route;
 use futures::StreamExt;
 use mongodb::bson::{doc, from_bson, Bson, Document};
 use serde::Deserialize;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::sync::Arc;
 
 #[derive(Deserialize)]
 pub struct IdQuery {
-    id: FieldElement,
+    id: Felt,
 }
 
 #[route(get, "/id_to_data", crate::endpoints::id_to_data)]

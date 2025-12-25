@@ -4,14 +4,18 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use starknet::{
     core::{
-        types::{BlockId, BlockTag, FieldElement, FunctionCall},
+        types::{BlockId, BlockTag, Felt, FunctionCall},
         utils::{cairo_short_string_to_felt, parse_cairo_short_string},
     },
     macros::selector,
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
 };
 
-use crate::{models::AppState ,Arc,config::{Config, EvmRecordVerifier}};
+use crate::{
+    config::{Config, EvmRecordVerifier},
+    models::AppState,
+    Arc,
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum HandlerType {
@@ -32,17 +36,17 @@ struct DiscordUser {
 }
 
 impl EvmRecordVerifier {
-    pub async fn execute_handler(&self, config: &Config, id: FieldElement) -> Result<String> {
+    pub async fn execute_handler(&self, config: &Config, id: Felt) -> Result<String> {
         match self.handler {
-            HandlerType::Static => Ok(FieldElement::to_string(&id)),
+            HandlerType::Static => Ok(Felt::to_string(&id)),
             HandlerType::GetDiscordName => self.get_discord_name(config, id).await,
             HandlerType::GetGithubName => self.get_github_name(config, id).await,
             HandlerType::GetTwitterName => self.get_twitter_name(config, id).await,
         }
     }
 
-    async fn get_discord_name(&self, config: &Config, id: FieldElement) -> Result<String> {
-        let social_id = FieldElement::to_string(&id);
+    async fn get_discord_name(&self, config: &Config, id: Felt) -> Result<String> {
+        let social_id = Felt::to_string(&id);
         let url = format!("{}/users/{}", config.variables.discord_api_url, social_id);
         let client = Client::new();
         let resp = client
@@ -60,8 +64,8 @@ impl EvmRecordVerifier {
 
         Ok(resp.username)
     }
-    async fn get_github_name(&self, config: &Config, id: FieldElement) -> Result<String> {
-        let social_id = FieldElement::to_string(&id);
+    async fn get_github_name(&self, config: &Config, id: Felt) -> Result<String> {
+        let social_id = Felt::to_string(&id);
         let url = format!("{}/user/{}", config.variables.github_api_url, social_id);
         let client = Client::builder()
             .user_agent("request")
@@ -87,8 +91,8 @@ impl EvmRecordVerifier {
         Ok(user.login)
     }
 
-    async fn get_twitter_name(&self, config: &Config, id: FieldElement) -> Result<String> {
-        let social_id = FieldElement::to_string(&id);
+    async fn get_twitter_name(&self, config: &Config, id: Felt) -> Result<String> {
+        let social_id = Felt::to_string(&id);
         let client = Client::new();
         let response = client
             .get(format!(
@@ -122,22 +126,21 @@ impl EvmRecordVerifier {
 pub async fn get_verifier_data(
     state: &Arc<AppState>,
     provider: &JsonRpcClient<HttpTransport>,
-    id: FieldElement,
+    id: Felt,
     record_config: &EvmRecordVerifier,
 ) -> Option<String> {
     let logger = &state.logger;
     let config = &state.conf;
 
-    let mut calls: Vec<FieldElement> =
-        vec![FieldElement::from(record_config.verifier_contracts.len())];
+    let mut calls: Vec<Felt> = vec![Felt::from(record_config.verifier_contracts.len())];
     for verifier in &record_config.verifier_contracts {
         calls.push(config.contracts.starknetid);
         calls.push(selector!("get_verifier_data"));
-        calls.push(FieldElement::from_dec_str("4").unwrap());
+        calls.push(Felt::from_dec_str("4").unwrap());
         calls.push(id);
         calls.push(cairo_short_string_to_felt(&record_config.field).unwrap());
         calls.push(*verifier);
-        calls.push(FieldElement::ZERO)
+        calls.push(Felt::ZERO)
     }
 
     let call_result = provider
@@ -154,7 +157,7 @@ pub async fn get_verifier_data(
     match call_result {
         Ok(result) => {
             let social_id = find_social_id(&result);
-            if social_id == FieldElement::ZERO {
+            if social_id == Felt::ZERO {
                 return None;
             }
             match record_config.execute_handler(config, social_id).await {
@@ -172,25 +175,25 @@ pub async fn get_verifier_data(
     }
 }
 
-fn find_social_id(result: &[FieldElement]) -> FieldElement {
+fn find_social_id(result: &[Felt]) -> Felt {
     // Remove the first element
     let skipped_result = &result[2..];
 
     // Iterate over chunks of 2 elements
     for chunk in skipped_result.chunks(2) {
         if let [_, second] = chunk {
-            if *second != FieldElement::ZERO {
+            if *second != Felt::ZERO {
                 return *second;
             }
         }
     }
-    FieldElement::ZERO
+    Felt::ZERO
 }
 
 pub async fn get_unbounded_user_data(
     state: &Arc<AppState>,
     provider: &JsonRpcClient<HttpTransport>,
-    id: FieldElement,
+    id: Felt,
     field: &str,
 ) -> Option<String> {
     let logger = &state.logger;
@@ -201,18 +204,14 @@ pub async fn get_unbounded_user_data(
             FunctionCall {
                 contract_address: config.contracts.starknetid,
                 entry_point_selector: selector!("get_unbounded_user_data"),
-                calldata: vec![
-                    id,
-                    cairo_short_string_to_felt(field).unwrap(),
-                    FieldElement::ZERO,
-                ],
+                calldata: vec![id, cairo_short_string_to_felt(field).unwrap(), Felt::ZERO],
             },
             BlockId::Tag(BlockTag::Latest),
         )
         .await;
     match call_result {
         Ok(result) => {
-            if result[0] == FieldElement::ZERO {
+            if result[0] == Felt::ZERO {
                 return None;
             }
             let res = result

@@ -13,7 +13,7 @@ use axum_auto_routes::route;
 use futures::StreamExt;
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::sync::Arc;
 
 #[derive(Serialize)]
@@ -23,7 +23,7 @@ pub struct AvailableIds {
 
 #[derive(Deserialize)]
 pub struct AddrQuery {
-    addr: FieldElement,
+    addr: Felt,
 }
 
 #[route(get, "/addr_to_available_ids", crate::endpoints::addr_to_available_ids)]
@@ -72,12 +72,15 @@ pub async fn handler(
                         if let Some(doc) = doc_opt {
                             let domain_rs = doc.get_str("domain");
                             if let Ok(domain) = domain_rs {
-                                if get_custom_resolver(&domains, domain ,&state).await.is_none() {
+                                if get_custom_resolver(&domains, domain, &state)
+                                    .await
+                                    .is_none()
+                                {
                                     continue;
                                 }
                             }
                         }
-                        ids.push(FieldElement::from_hex_be(&token_id).unwrap().to_string());
+                        ids.push(Felt::from_hex(&token_id).unwrap().to_string());
                     }
                 }
             }

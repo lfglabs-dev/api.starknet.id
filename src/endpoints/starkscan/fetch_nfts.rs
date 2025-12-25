@@ -7,14 +7,14 @@ use axum::{
 use axum_auto_routes::route;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::sync::Arc;
 
 const PAGE_SIZE: usize = 50;
 
 #[derive(Deserialize)]
 pub struct FetchNftsQuery {
-    addr: FieldElement,
+    addr: Felt,
     cursor: Option<String>,
 }
 

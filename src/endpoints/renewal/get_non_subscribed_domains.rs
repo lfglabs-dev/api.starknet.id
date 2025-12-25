@@ -12,12 +12,12 @@ use futures::StreamExt;
 use mongodb::{bson::doc, options::AggregateOptions};
 use regex::Regex;
 use serde::Deserialize;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::{collections::HashSet, sync::Arc};
 
 #[derive(Deserialize)]
 pub struct StarknetIdQuery {
-    addr: FieldElement,
+    addr: Felt,
 }
 
 lazy_static::lazy_static! {

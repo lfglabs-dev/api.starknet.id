@@ -1,13 +1,13 @@
 use crate::{models::AppState, utils::get_error};
 use axum::{
-    extract::{Query, State},
+    extract::State,
     http::{HeaderMap, HeaderValue, StatusCode},
     response::IntoResponse,
     Json,
 };
 use axum_auto_routes::route;
 use mongodb::bson::{doc, Bson};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::sync::Arc;
 
 #[derive(Serialize)]
@@ -15,10 +15,12 @@ pub struct CountMintedDomainsData {
     count: u64,
 }
 
-#[route(get, "/stats/count_minted_domains", crate::endpoints::stats::count_minted_domains)]
-pub async fn handler(
-    State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+#[route(
+    get,
+    "/stats/count_minted_domains",
+    crate::endpoints::stats::count_minted_domains
+)]
+pub async fn handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     headers.insert("Cache-Control", HeaderValue::from_static("max-age=60"));
 

@@ -10,7 +10,7 @@ use axum::{
 use axum_auto_routes::route;
 use mongodb::bson::{doc, Bson};
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::sync::Arc;
 
 #[derive(Serialize)]
@@ -20,7 +20,7 @@ pub struct TokenIdData {
 
 #[derive(Deserialize)]
 pub struct TokenIdQuery {
-    addr: FieldElement,
+    addr: Felt,
 }
 
 #[route(get, "/addr_to_token_id", crate::endpoints::addr_to_token_id)]
@@ -50,7 +50,7 @@ pub async fn handler(
             headers.insert("Cache-Control", HeaderValue::from_static("max-age=30"));
 
             if let Some(doc) = doc {
-                let id = FieldElement::from_hex_be(doc.get_str("id").unwrap_or_default())
+                let id = Felt::from_hex(doc.get_str("id").unwrap_or_default())
                     .unwrap()
                     .to_string();
                 let data = TokenIdData { token_id: id };

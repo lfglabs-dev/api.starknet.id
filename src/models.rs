@@ -2,12 +2,12 @@ use mongodb::{
     bson::{from_bson, Bson},
     Database,
 };
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 
 use crate::{
     config::{Config, OffchainResolver},
+    logger::Logger,
     utils::to_hex,
-    logger::Logger, 
 };
 use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
@@ -22,10 +22,10 @@ pub struct AppState {
     pub free_domains_db: Database,
     pub states: States,
     pub dynamic_offchain_resolvers: Arc<Mutex<HashMap<String, OffchainResolver>>>,
-    pub logger : Logger,
+    pub logger: Logger,
 }
 
-fn serialize_felt<S>(field_element: &FieldElement, serializer: S) -> Result<S::Ok, S::Error>
+fn serialize_felt<S>(field_element: &Felt, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -33,10 +33,7 @@ where
     serializer.serialize_str(&hex_string)
 }
 
-fn serialize_opt_felt<S>(
-    field_element: &Option<FieldElement>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
+fn serialize_opt_felt<S>(field_element: &Option<Felt>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -49,7 +46,7 @@ where
     }
 }
 
-fn serialize_vec_felt<S>(vec: &Vec<FieldElement>, serializer: S) -> Result<S::Ok, S::Error>
+fn serialize_vec_felt<S>(vec: &Vec<Felt>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -60,7 +57,7 @@ where
     seq.end()
 }
 
-struct SerializedFelt<'a>(&'a FieldElement);
+struct SerializedFelt<'a>(&'a Felt);
 
 impl<'a> Serialize for SerializedFelt<'a> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -74,9 +71,9 @@ impl<'a> Serialize for SerializedFelt<'a> {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IdentityData {
     #[serde(serialize_with = "serialize_felt")]
-    pub id: FieldElement,
+    pub id: Felt,
     #[serde(serialize_with = "serialize_felt")]
-    pub owner: FieldElement,
+    pub owner: Felt,
     pub main: bool,
     pub creation_date: u64,
     #[serde(deserialize_with = "deserialize_optional_domain")]
@@ -110,39 +107,39 @@ pub struct Domain {
     pub creation_date: u64,
     pub expiry: Option<u64>,
     #[serde(serialize_with = "serialize_opt_felt")]
-    pub resolver: Option<FieldElement>,
+    pub resolver: Option<Felt>,
     #[serde(serialize_with = "serialize_opt_felt")]
-    pub legacy_address: Option<FieldElement>,
+    pub legacy_address: Option<Felt>,
     #[serde(serialize_with = "serialize_opt_felt")]
-    pub rev_address: Option<FieldElement>,
+    pub rev_address: Option<Felt>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UserData {
     #[serde(serialize_with = "serialize_felt")]
-    pub field: FieldElement,
+    pub field: Felt,
     #[serde(serialize_with = "serialize_felt")]
-    pub data: FieldElement,
+    pub data: Felt,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VerifierData {
     #[serde(serialize_with = "serialize_felt")]
-    pub verifier: FieldElement,
+    pub verifier: Felt,
     #[serde(serialize_with = "serialize_felt")]
-    pub field: FieldElement,
+    pub field: Felt,
     #[serde(serialize_with = "serialize_felt")]
-    pub data: FieldElement,
+    pub data: Felt,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ExtendedVerifierData {
     #[serde(serialize_with = "serialize_felt")]
-    pub verifier: FieldElement,
+    pub verifier: Felt,
     #[serde(serialize_with = "serialize_felt")]
-    pub field: FieldElement,
+    pub field: Felt,
     #[serde(serialize_with = "serialize_vec_felt")]
-    pub extended_data: Vec<FieldElement>,
+    pub extended_data: Vec<Felt>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -159,8 +156,8 @@ pub struct States {
 
 #[derive(Deserialize, Debug)]
 pub struct OffchainResolverHint {
-    pub address: FieldElement,
-    pub r: FieldElement,
-    pub s: FieldElement,
+    pub address: Felt,
+    pub r: Felt,
+    pub s: Felt,
     pub max_validity: u64,
 }

@@ -14,7 +14,7 @@ use mongodb::{
 };
 use starknet::{
     core::{
-        types::{BlockId, BlockTag, FieldElement, FunctionCall},
+        types::{BlockId, BlockTag, Felt, FunctionCall},
         utils::parse_cairo_short_string,
     },
     macros::selector,
@@ -54,7 +54,7 @@ pub fn decode_ens(name: &str) -> String {
     labels.join(".")
 }
 
-pub fn to_eth_hex(felt: &FieldElement) -> String {
+pub fn to_eth_hex(felt: &Felt) -> String {
     let bytes = felt.to_bytes_be();
     let mut result = String::with_capacity(42);
     result.push_str("0x");
@@ -150,11 +150,11 @@ pub fn sign_message(
 // user data utils
 pub async fn get_user_data(
     provider: &JsonRpcClient<HttpTransport>,
-    contract: FieldElement,
-    id: FieldElement,
-    field: FieldElement,
+    contract: Felt,
+    id: Felt,
+    field: Felt,
     state: &Arc<AppState>,
-) -> Option<FieldElement> {
+) -> Option<Felt> {
     let logger = &state.logger;
     let call_result = provider
         .call(
@@ -165,7 +165,7 @@ pub async fn get_user_data(
                     id,
                     // cairo_short_string_to_felt(field).unwrap(),
                     field,
-                    FieldElement::ZERO,
+                    Felt::ZERO,
                 ],
             },
             BlockId::Tag(BlockTag::Latest),
@@ -174,7 +174,7 @@ pub async fn get_user_data(
 
     match call_result {
         Ok(result) => {
-            if result[0] != FieldElement::ZERO {
+            if result[0] != Felt::ZERO {
                 return Some(result[0]);
             }
             None
@@ -193,19 +193,19 @@ pub async fn get_user_data(
 pub async fn get_user_data_multicall(
     provider: &JsonRpcClient<HttpTransport>,
     state: &Arc<AppState>,
-    id: FieldElement,
-    fields: Vec<FieldElement>,
-) -> Option<FieldElement> {
+    id: Felt,
+    fields: Vec<Felt>,
+) -> Option<Felt> {
     let logger = &state.logger;
     let config = &state.conf;
-    let mut calls: Vec<FieldElement> = vec![FieldElement::from(fields.len())];
+    let mut calls: Vec<Felt> = vec![Felt::from(fields.len())];
     for field in fields {
         calls.push(config.contracts.starknetid);
         calls.push(selector!("get_user_data"));
-        calls.push(FieldElement::THREE);
+        calls.push(Felt::THREE);
         calls.push(id);
         calls.push(field);
-        calls.push(FieldElement::ZERO)
+        calls.push(Felt::ZERO)
     }
     let call_result = provider
         .call(
@@ -220,9 +220,9 @@ pub async fn get_user_data_multicall(
 
     match call_result {
         Ok(result) => {
-            if result[3] != FieldElement::ZERO {
+            if result[3] != Felt::ZERO {
                 Some(result[3])
-            } else if result[5] != FieldElement::ZERO {
+            } else if result[5] != Felt::ZERO {
                 Some(result[5])
             } else {
                 None
@@ -237,14 +237,14 @@ pub async fn get_user_data_multicall(
 
 pub async fn domain_to_address(
     provider: &JsonRpcClient<HttpTransport>,
-    naming_contract: FieldElement,
-    encoded_domain: Vec<FieldElement>,
+    naming_contract: Felt,
+    encoded_domain: Vec<Felt>,
     state: &Arc<AppState>,
-) -> Option<FieldElement> {
+) -> Option<Felt> {
     let logger = &state.logger;
-    let mut calldata: Vec<FieldElement> = vec![FieldElement::from(encoded_domain.len())];
+    let mut calldata: Vec<Felt> = vec![Felt::from(encoded_domain.len())];
     calldata.extend(encoded_domain);
-    calldata.push(FieldElement::ZERO);
+    calldata.push(Felt::ZERO);
     let call_result = provider
         .call(
             FunctionCall {
@@ -259,7 +259,7 @@ pub async fn domain_to_address(
     match call_result {
         Ok(result) => {
             logger.info(format!("domain_to_address result: {:?}", result));
-            if result[0] != FieldElement::ZERO {
+            if result[0] != Felt::ZERO {
                 return Some(result[0]);
             }
             None
@@ -279,8 +279,8 @@ pub async fn get_profile_picture(
     config: &Config,
     provider: &JsonRpcClient<HttpTransport>,
     verifier_data_collection: Collection<Document>,
-    pfp_verifier: FieldElement,
-    id: FieldElement,
+    pfp_verifier: Felt,
+    id: Felt,
     state: &Arc<AppState>,
 ) -> Option<String> {
     let logger = &state.logger;
@@ -322,11 +322,11 @@ pub async fn get_profile_picture(
             let call_result = provider
                 .call(
                     FunctionCall {
-                        contract_address: FieldElement::from_hex_be(&contract_addr).unwrap(),
+                        contract_address: Felt::from_hex(&contract_addr).unwrap(),
                         entry_point_selector: selector!("tokenURI"),
                         calldata: vec![
-                            FieldElement::from_hex_be(&token_id.0).unwrap(),
-                            FieldElement::from_hex_be(&token_id.1).unwrap(),
+                            Felt::from_hex(&token_id.0).unwrap(),
+                            Felt::from_hex(&token_id.1).unwrap(),
                         ],
                     },
                     BlockId::Tag(BlockTag::Latest),

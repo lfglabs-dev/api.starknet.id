@@ -14,7 +14,7 @@ use mongodb::{bson::doc, options::AggregateOptions};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use starknet::{
-    core::types::{BlockId, BlockTag, FieldElement, FunctionCall},
+    core::types::{BlockId, BlockTag, Felt, FunctionCall},
     macros::selector,
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
 };
@@ -94,19 +94,19 @@ pub async fn handler(
                                     //encode domain
                                     let trimmed_domain = query.domain.strip_suffix(".stark").unwrap_or(&query.domain);
                                     let splitted_domain = trimmed_domain.split('.').collect::<Vec<_>>();
-                                    let encoded_domain : Vec<FieldElement> = splitted_domain.iter().map(|part| encode(part).unwrap()).collect();
+                                    let encoded_domain : Vec<Felt> = splitted_domain.iter().map(|part| encode(part).unwrap()).collect();
 
                                     // build calldata
-                                    let mut calldata : Vec<FieldElement> = vec![
-                                        FieldElement::from(splitted_domain.len()),
+                                    let mut calldata : Vec<Felt> = vec![
+                                        Felt::from(splitted_domain.len()),
                                     ];
                                     calldata.extend(encoded_domain);
                                     // add hint in calldata
-                                    calldata.push(FieldElement::from(4_u64));
+                                    calldata.push(Felt::from(4_u64));
                                     calldata.push(hints.address);
                                     calldata.push(hints.r);
                                     calldata.push(hints.s);
-                                    calldata.push(FieldElement::from(hints.max_validity));
+                                    calldata.push(Felt::from(hints.max_validity));
 
                                     let call_result = provider
                                         .call(

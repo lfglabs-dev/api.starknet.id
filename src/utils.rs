@@ -8,7 +8,7 @@ use axum::{
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::Serialize;
 use serde_json::Value;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::{fmt::Write, str, sync::Arc};
 
 use crate::{config::Config, models::AppState};
@@ -50,7 +50,7 @@ pub fn extract_prefix_and_root(domain: String) -> (String, String) {
     (prefix, root)
 }
 
-pub fn to_hex(felt: &FieldElement) -> String {
+pub fn to_hex(felt: &Felt) -> String {
     let bytes = felt.to_bytes_be();
     let mut result = String::with_capacity(bytes.len() * 2 + 2);
     result.push_str("0x");

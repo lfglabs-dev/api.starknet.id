@@ -16,14 +16,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use starknet::core::{
     crypto::{ecdsa_sign, pedersen_hash},
-    types::FieldElement,
+    types::Felt,
 };
 use starknet_id::encode;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct SigQuery {
     source_domain: String,
-    target_address: FieldElement,
+    target_address: Felt,
     source_signature: Vec<u8>,
     max_validity: u64,
 }
@@ -62,7 +62,7 @@ struct JsonError {
 }
 
 lazy_static::lazy_static! {
-    static ref SOL_SUBDOMAIN_STR: FieldElement = FieldElement::from_dec_str("9145722242464647959622012987758").unwrap();
+    static ref SOL_SUBDOMAIN_STR: Felt = Felt::from_dec_str("9145722242464647959622012987758").unwrap();
 }
 
 #[route(
@@ -133,7 +133,7 @@ pub async fn handler(
                                 &pedersen_hash(
                                     &pedersen_hash(
                                         &SOL_SUBDOMAIN_STR,
-                                        &FieldElement::from_dec_str(
+                                        &Felt::from_dec_str(
                                             stark_max_validity_sec.to_string().as_str(),
                                         )
                                         .unwrap(),

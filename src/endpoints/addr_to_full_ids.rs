@@ -16,7 +16,7 @@ use mongodb::{
     options::AggregateOptions,
 };
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::sync::Arc;
 
 #[derive(Serialize, Deserialize)]
@@ -42,7 +42,7 @@ struct NFTPP {
 
 #[derive(Deserialize)]
 pub struct AddrQuery {
-    addr: FieldElement,
+    addr: Felt,
 }
 
 #[derive(Serialize)]
@@ -155,11 +155,9 @@ pub async fn handler(
             let mut temp_full_ids = Vec::new();
             while let Some(doc) = cursor.next().await {
                 if let Ok(doc) = doc {
-                    let id = FieldElement::from_hex_be(
-                        &doc.get_str("id").unwrap_or_default().to_owned(),
-                    )
-                    .unwrap()
-                    .to_string();
+                    let id = Felt::from_hex(&doc.get_str("id").unwrap_or_default().to_owned())
+                        .unwrap()
+                        .to_string();
                     let domain = doc.get_str("domain").ok().map(String::from);
                     let domain_expiry = doc.get_i64("domain_expiry").ok();
                     temp_full_ids.push(TempsFullId {
