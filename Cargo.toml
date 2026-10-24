@@ -38,7 +38,7 @@ starknet = {git = "https://github.com/xJonathanLEI/starknet-rs", rev = "c974e5cb
 starknet-crypto = {git = "https://github.com/xJonathanLEI/starknet-rs", rev = "c974e5cb42e8d8344cee910b76005ec46b4dd3ed", package = "starknet-crypto"}
 starknet-id = {git = "https://github.com/starknet-id/starknetid.rs", rev = "2b30c2453b96789a628c86d2edebb1023fa2e77d"}
 tokio = {version = "1.40.0", features = ["macros", "rt-multi-thread"]}
-toml = "0.7.8"
+toml = "1.1.8"
 tower-http = {version = "0.4.4", features = ["cors"]}
 
 # required for solana SDK to work
