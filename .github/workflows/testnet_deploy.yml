@@ -18,7 +18,7 @@ jobs:
       AWS_DEFAULT_REGION: 'eu-west-3'
     steps:
       - name: Setting up SSH key
-        uses: webfactory/ssh-agent@v0.5.3
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.SSH_KEY }}
 
