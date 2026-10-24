@@ -33,7 +33,7 @@ serde = {version = "1.0.209", features = ["derive"]}
 serde_derive = "1.0.183"
 serde_json = "1.0.127"
 serde_urlencoded = "0.7.1"
-solana-sdk = "1.18.23"
+solana-sdk = "5.0.0"
 starknet = {git = "https://github.com/xJonathanLEI/starknet-rs", rev = "c974e5cb42e8d8344cee910b76005ec46b4dd3ed"}
 starknet-crypto = {git = "https://github.com/xJonathanLEI/starknet-rs", rev = "c974e5cb42e8d8344cee910b76005ec46b4dd3ed", package = "starknet-crypto"}
 starknet-id = {git = "https://github.com/starknet-id/starknetid.rs", rev = "2b30c2453b96789a628c86d2edebb1023fa2e77d"}
