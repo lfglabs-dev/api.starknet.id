@@ -8,7 +8,7 @@ version = "0.1.0"
 [dependencies]
 anyhow = "1.0.86"
 ark-ff = "0.4.2"
-axum = "0.6.20"
+axum = "0.8.9"
 axum_auto_routes = {git = "https://github.com/Th0rgal/axum_auto_routes.git", rev = "f9e1d2083e887cd264642359c4aa851938da6f09"}
 base64 = "0.22.1"
 bincode = "1.3.3"
